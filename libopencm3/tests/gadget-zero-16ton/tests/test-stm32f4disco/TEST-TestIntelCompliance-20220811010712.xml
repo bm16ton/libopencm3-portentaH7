@@ -1,0 +1,14 @@
+<?xml version="1.0" ?>
+<testsuite name="TestIntelCompliance-20220811010712" tests="1" time="0.006" failures="0" errors="1">
+	<testcase classname="TestIntelCompliance" name="test_ctrl_loopbacks" time="0.006">
+		<error type="AssertionError" message="array('B', [204, 56, 180, 142, 203, 216, 47, 144, 215, 193]) != array('B', [203, 216, 47, 144, 215, 193, 187, 68, 0, 0]) : should have read back what we wrote"><![CDATA[Traceback (most recent call last):
+  File "test_gadget0.py", line 129, in test_ctrl_loopbacks
+    self.inner_t(10)
+  File "test_gadget0.py", line 125, in inner_t
+    self.assertEqual(expected, read, "should have read back what we wrote")
+AssertionError: array('B', [204, 56, 180, 142, 203, 216, 47, 144, 215, 193]) != array('B', [203, 216, 47, 144, 215, 193, 187, 68, 0, 0]) : should have read back what we wrote
+]]></error>
+	</testcase>
+	<system-out><![CDATA[]]></system-out>
+	<system-err><![CDATA[]]></system-err>
+</testsuite>

@@ -1,0 +1,13 @@
+<?xml version="1.0" ?>
+<testsuite name="TestControlTransfer_Reads-20220811010712" tests="8" time="0.033" failures="0" errors="0">
+	<testcase classname="TestControlTransfer_Reads" name="test_basic" time="0.004"/>
+	<testcase classname="TestControlTransfer_Reads" name="test_matching_sizes" time="0.007"/>
+	<testcase classname="TestControlTransfer_Reads" name="test_mean_limits" time="0.003"/>
+	<testcase classname="TestControlTransfer_Reads" name="test_read_longer" time="0.004"/>
+	<testcase classname="TestControlTransfer_Reads" name="test_read_needs_zlp" time="0.005"/>
+	<testcase classname="TestControlTransfer_Reads" name="test_read_nothing" time="0.003"/>
+	<testcase classname="TestControlTransfer_Reads" name="test_read_zero" time="0.003"/>
+	<testcase classname="TestControlTransfer_Reads" name="test_waytoobig" time="0.004"/>
+	<system-out><![CDATA[]]></system-out>
+	<system-err><![CDATA[]]></system-err>
+</testsuite>

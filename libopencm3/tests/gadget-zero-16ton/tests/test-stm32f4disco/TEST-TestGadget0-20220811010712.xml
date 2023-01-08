@@ -1,0 +1,11 @@
+<?xml version="1.0" ?>
+<testsuite name="TestGadget0-20220811010712" tests="6" time="0.014" failures="0" errors="0">
+	<testcase classname="TestGadget0" name="test_config_switch_2" time="0.002"/>
+	<testcase classname="TestGadget0" name="test_config_switch_3" time="0.003"/>
+	<testcase classname="TestGadget0" name="test_config_zero_addressed" time="0.002"/>
+	<testcase classname="TestGadget0" name="test_fetch_config" time="0.003"/>
+	<testcase classname="TestGadget0" name="test_invalid_config" time="0.002"/>
+	<testcase classname="TestGadget0" name="test_sanity" time="0.002"/>
+	<system-out><![CDATA[]]></system-out>
+	<system-err><![CDATA[]]></system-err>
+</testsuite>

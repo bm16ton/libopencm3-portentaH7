@@ -1,0 +1,11 @@
+<?xml version="1.0" ?>
+<testsuite name="TestConfigSourceSinkPerformance-20220811010712" tests="2" time="0.000" failures="0" errors="0">
+	<testcase classname="TestConfigSourceSinkPerformance" name="test_read_perf" time="0.000">
+		<skipped type="skip" message="Perf tests only on demand (comment this line!)"/>
+	</testcase>
+	<testcase classname="TestConfigSourceSinkPerformance" name="test_write_perf" time="0.000">
+		<skipped type="skip" message="Perf tests only on demand (comment this line!)"/>
+	</testcase>
+	<system-out><![CDATA[]]></system-out>
+	<system-err><![CDATA[]]></system-err>
+</testsuite>

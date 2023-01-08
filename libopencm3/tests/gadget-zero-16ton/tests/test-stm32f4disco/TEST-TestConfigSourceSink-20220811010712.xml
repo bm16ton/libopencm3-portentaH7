@@ -1,0 +1,14 @@
+<?xml version="1.0" ?>
+<testsuite name="TestConfigSourceSink-20220811010712" tests="9" time="0.119" failures="0" errors="0">
+	<testcase classname="TestConfigSourceSink" name="test_control_known" time="0.004"/>
+	<testcase classname="TestConfigSourceSink" name="test_control_unknown" time="0.003"/>
+	<testcase classname="TestConfigSourceSink" name="test_read_sequence" time="0.004"/>
+	<testcase classname="TestConfigSourceSink" name="test_read_write_interleaved" time="0.027"/>
+	<testcase classname="TestConfigSourceSink" name="test_read_zeros" time="0.007"/>
+	<testcase classname="TestConfigSourceSink" name="test_write_batch" time="0.010"/>
+	<testcase classname="TestConfigSourceSink" name="test_write_mixed" time="0.048"/>
+	<testcase classname="TestConfigSourceSink" name="test_write_simple" time="0.008"/>
+	<testcase classname="TestConfigSourceSink" name="test_write_zlp" time="0.008"/>
+	<system-out><![CDATA[]]></system-out>
+	<system-err><![CDATA[]]></system-err>
+</testsuite>

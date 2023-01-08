@@ -1,0 +1,28 @@
+--- lib/usb/usb_dwc_common.c
++++ lib/usb/usb_dwc_common.c
+@@ -380,14 +398,17 @@ void dwc_poll(usbd_device *usbd_dev)
+ 	 * There is no global interrupt flag for transmit complete.
+ 	 * The XFRC bit must be checked in each OTG_DIEPINT(x).
+ 	 */
+-	for (i = 0; i < ENDPOINT_COUNT; i++) { /* Iterate over endpoints. */
+-		if (REBASE(OTG_DIEPINT(i)) & OTG_DIEPINTX_XFRC) {
+-			/* Transfer complete. */
+-			REBASE(OTG_DIEPINT(i)) = OTG_DIEPINTX_XFRC;
+-			if (usbd_dev->user_callback_ctr[i]
+-						       [USB_TRANSACTION_IN]) {
+-				usbd_dev->user_callback_ctr[i]
+-					[USB_TRANSACTION_IN](usbd_dev, i);
++	if (intsts & OTG_GINTSTS_IEPINT)
++	{
++		for (i = 0; i < USB_ENDPOINT_COUNT; i++) { /* Iterate over endpoints. */
++			if (REBASE(OTG_DIEPINT(i)) & OTG_DIEPINTX_XFRC) {
++				/* Transfer complete. */
++				REBASE(OTG_DIEPINT(i)) = OTG_DIEPINTX_XFRC;
++				if (usbd_dev->user_callback_ctr[i]
++						[USB_TRANSACTION_IN]) {
++					usbd_dev->user_callback_ctr[i]
++						[USB_TRANSACTION_IN](usbd_dev, i);
++				}
+ 			}
+ 		}
+ 	}

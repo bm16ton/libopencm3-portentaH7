@@ -1,0 +1,31 @@
+--- include/libopencm3/usb/dwc/otg_hs.h
++++ include/libopencm3/usb/dwc/otg_hs.h
+@@ -28,7 +28,7 @@
+ #include <libopencm3/usb/dwc/otg_common.h>
+ 
+ /* Memory map is required for USB_OTG_HS_BASE address */
+-#if defined(STM32F2) || defined(STM32F4)
++#if defined(STM32F2) || defined(STM32F4) || defined(STM32F7)
+ #	include <libopencm3/stm32/memorymap.h>
+ #else
+ #	error "device family not supported by dwc/otg_hs."
+@@ -170,4 +170,19 @@
+ #define OTG_HCSPLT_HUBADDR_MASK		(0x7f << 7)
+ #define OTG_HCSPLT_PORTADDR_MASK	(0x7f << 0)
+ 
++/* USB PHY controller registers. */
++#define USBPHYC_BASE			0x40017C00
++#define OTG_HS_PHYC_PLL1		MMIO32(USBPHYC_BASE + 0)
++
++#define OTG_PHYC_PLL1_ENABLE		1
++
++#define OTG_HS_PHYC_TUNE		MMIO32(USBPHYC_BASE + 0xc)
++#define OTG_HS_PHYC_LDO			MMIO32(USBPHYC_BASE + 0x18)
++/* ??? The st header files have this:
++ * #define USB_HS_PHYC_LDO_ENABLE                   USB_HS_PHYC_LDO_DISABLE
++ * ...go figure...
++ */
++#define OTG_PHYC_LDO_DISABLE		(1 << 2)
++#define OTG_PHYC_LDO_STATUS		(1 << 1)
++
+ #endif

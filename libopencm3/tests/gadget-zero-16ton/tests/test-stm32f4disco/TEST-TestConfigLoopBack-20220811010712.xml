@@ -1,0 +1,8 @@
+<?xml version="1.0" ?>
+<testsuite name="TestConfigLoopBack-20220811010712" tests="3" time="0.016" failures="0" errors="0">
+	<testcase classname="TestConfigLoopBack" name="test_dual_loop" time="0.006"/>
+	<testcase classname="TestConfigLoopBack" name="test_dual_loop_back_to_back" time="0.006"/>
+	<testcase classname="TestConfigLoopBack" name="test_simple_loop" time="0.004"/>
+	<system-out><![CDATA[]]></system-out>
+	<system-err><![CDATA[]]></system-err>
+</testsuite>
