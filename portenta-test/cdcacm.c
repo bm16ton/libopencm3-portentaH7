@@ -25,77 +25,38 @@
 #include <libopencm3/usb/usbd.h>
 #include <libopencm3/usb/cdc.h>
 #include <libopencm3/cm3/scb.h>
-#include <libopencm3/stm32/rcc.h>
+#include <libopencm3/stm32/spi.h>
 #include <libopencm3/stm32/gpio.h>
 #include <libopencm3/cm3/nvic.h>
 #include <libopencm3/cm3/cortex.h>
 #include <libopencm3/stm32/usart.h>
 #include <libopencm3/stm32/fsmc.h>
 #include <libopencm3/cm3/systick.h>
-
+#include "st7789_stm32_spi.h"
 #include <string.h>
 #include <errno.h>
 #include <stdio.h>
 #include <unistd.h>
 #include <ctype.h>
 #include "cdc.h"
+#include "qspi.h"
+#include "test_i2c.h"
 
 /* Define this to nonzero, to have only one cdcacm interaface (usb serial port) active. */
-#define SINGLE_CDCACM		0
+
 #define USART_CONSOLE USART1
 volatile uint32_t systick = 0;
 
+void spiRelInit(void);
+void spiInit(void);
+void spi_test(void);
 
 void get_buffered_line(void);
-
-enum
-{
-	/* WARNING: at this time, data IN endpoint sizes *must* equal the corresponding data OUT endpoint sizes. */
-	CDCACM_INTERFACE_0_DATA_IN_ENDPOINT			= 0x81,
-	CDCACM_INTERFACE_0_DATA_IN_ENDPOINT_SIZE		= 512,
-	CDCACM_INTERFACE_0_DATA_OUT_ENDPOINT			= 0x01,
-	CDCACM_INTERFACE_0_DATA_OUT_ENDPOINT_SIZE		= CDCACM_INTERFACE_0_DATA_IN_ENDPOINT_SIZE,
-	CDCACM_INTERFACE_0_NOTIFICATION_IN_ENDPOINT		= 0x82,
-	CDCACM_INTERFACE_0_NOTIFICATION_IN_ENDPOINT_SIZE	= 16,
-
-	CDCACM_INTERFACE_1_DATA_IN_ENDPOINT			= 0x83,
-	CDCACM_INTERFACE_1_DATA_IN_ENDPOINT_SIZE		= 512,
-	CDCACM_INTERFACE_1_DATA_OUT_ENDPOINT			= 0x03,
-	CDCACM_INTERFACE_1_DATA_OUT_ENDPOINT_SIZE		= CDCACM_INTERFACE_1_DATA_IN_ENDPOINT_SIZE,
-	CDCACM_INTERFACE_1_NOTIFICATION_IN_ENDPOINT		= 0x84,
-	CDCACM_INTERFACE_1_NOTIFICATION_IN_ENDPOINT_SIZE	= 16,
-
-	MAX_USB_PACKET_SIZE					= 512,
-	CDCACM_INTERFACE_COUNT					= 2,
-};
-
-static struct
-{
-	int		out_epnum;
-	int		in_epnum;
-	uint8_t		buf[MAX_USB_PACKET_SIZE];
-	int		max_packet_size;
-	int		len;
-}
-incoming_usb_data[CDCACM_INTERFACE_COUNT] =
-{
-	[0] =
-	{
-		.out_epnum		= CDCACM_INTERFACE_0_DATA_OUT_ENDPOINT,
-		.in_epnum		= CDCACM_INTERFACE_0_DATA_IN_ENDPOINT,
-		.max_packet_size	= CDCACM_INTERFACE_0_DATA_IN_ENDPOINT_SIZE,
-		.len			= 0,
-	},
-	[1] =
-	{
-		.out_epnum		= CDCACM_INTERFACE_1_DATA_OUT_ENDPOINT,
-		.in_epnum		= CDCACM_INTERFACE_1_DATA_IN_ENDPOINT,
-		.max_packet_size	= CDCACM_INTERFACE_1_DATA_IN_ENDPOINT_SIZE,
-		.len			= 0,
-	},
-};
-static unsigned avaiable_incoming_endpoints;
-
+#define CDCACM_PACKET_SIZE 512
+#define CDCACM_INTERFACE_0_DATA_IN_ENDPOINT 0x81
+#define CDCACM_INTERFACE_0_DATA_OUT_ENDPOINT 1
+#define CDCACM_INTERFACE_0_NOTIFICATION_IN_ENDPOINT 0x82
+#define CDCACM_INTERFACE_0_NOTIFICATION_IN_ENDPOINT_SIZE 64
 
 static const struct usb_device_descriptor dev = {
 	.bLength = USB_DT_DEVICE_SIZE,
@@ -127,17 +88,6 @@ static const struct usb_iface_assoc_descriptor cdcacm_0_assoc = {
 	.iFunction = 0,
 };
 
-static const struct usb_iface_assoc_descriptor cdcacm_1_assoc = {
-	.bLength = USB_DT_INTERFACE_ASSOCIATION_SIZE,
-	.bDescriptorType = USB_DT_INTERFACE_ASSOCIATION,
-	.bFirstInterface = 2,
-	.bInterfaceCount = 2,
-	.bFunctionClass = USB_CLASS_CDC,
-	.bFunctionSubClass = USB_CDC_SUBCLASS_ACM,
-	.bFunctionProtocol = USB_CDC_PROTOCOL_AT,
-	.iFunction = 0,
-};
-
 
 /*
  * This notification endpoint isn't implemented. According to CDC spec it's
@@ -149,50 +99,27 @@ static const struct usb_endpoint_descriptor comm_endp_cdcacm_0[] = {{
 	.bDescriptorType = USB_DT_ENDPOINT,
 	.bEndpointAddress = CDCACM_INTERFACE_0_NOTIFICATION_IN_ENDPOINT,
 	.bmAttributes = USB_ENDPOINT_ATTR_INTERRUPT,
-	.wMaxPacketSize = CDCACM_INTERFACE_0_NOTIFICATION_IN_ENDPOINT_SIZE,
+	.wMaxPacketSize = 64,
 	.bInterval = 11,
 } };
 
-static const struct usb_endpoint_descriptor comm_endp_cdcacm_1[] = {{
-	.bLength = USB_DT_ENDPOINT_SIZE,
-	.bDescriptorType = USB_DT_ENDPOINT,
-	.bEndpointAddress = CDCACM_INTERFACE_1_NOTIFICATION_IN_ENDPOINT,
-	.bmAttributes = USB_ENDPOINT_ATTR_INTERRUPT,
-	.wMaxPacketSize = CDCACM_INTERFACE_1_NOTIFICATION_IN_ENDPOINT_SIZE,
-	.bInterval = 11,
-} };
 
 static const struct usb_endpoint_descriptor data_endp_cdcacm_0[] = {{
 	.bLength = USB_DT_ENDPOINT_SIZE,
 	.bDescriptorType = USB_DT_ENDPOINT,
 	.bEndpointAddress = CDCACM_INTERFACE_0_DATA_OUT_ENDPOINT,
 	.bmAttributes = USB_ENDPOINT_ATTR_BULK,
-	.wMaxPacketSize = CDCACM_INTERFACE_0_DATA_OUT_ENDPOINT_SIZE,
+	.wMaxPacketSize = CDCACM_PACKET_SIZE,
 	.bInterval = 1,
 }, {
 	.bLength = USB_DT_ENDPOINT_SIZE,
 	.bDescriptorType = USB_DT_ENDPOINT,
 	.bEndpointAddress = CDCACM_INTERFACE_0_DATA_IN_ENDPOINT,
 	.bmAttributes = USB_ENDPOINT_ATTR_BULK,
-	.wMaxPacketSize = CDCACM_INTERFACE_0_DATA_IN_ENDPOINT_SIZE,
+	.wMaxPacketSize = CDCACM_PACKET_SIZE,
 	.bInterval = 1,
 } };
 
-static const struct usb_endpoint_descriptor data_endp_cdcacm_1[] = {{
-	.bLength = USB_DT_ENDPOINT_SIZE,
-	.bDescriptorType = USB_DT_ENDPOINT,
-	.bEndpointAddress = CDCACM_INTERFACE_1_DATA_OUT_ENDPOINT,
-	.bmAttributes = USB_ENDPOINT_ATTR_BULK,
-	.wMaxPacketSize = CDCACM_INTERFACE_1_DATA_OUT_ENDPOINT_SIZE,
-	.bInterval = 1,
-}, {
-	.bLength = USB_DT_ENDPOINT_SIZE,
-	.bDescriptorType = USB_DT_ENDPOINT,
-	.bEndpointAddress = CDCACM_INTERFACE_1_DATA_IN_ENDPOINT,
-	.bmAttributes = USB_ENDPOINT_ATTR_BULK,
-	.wMaxPacketSize = CDCACM_INTERFACE_1_DATA_IN_ENDPOINT_SIZE,
-	.bInterval = 1,
-} };
 
 static const struct {
 	struct usb_cdc_header_descriptor header;
@@ -246,22 +173,6 @@ static const struct usb_interface_descriptor comm_iface_cdcacm_0[] = {{
 	.extralen = sizeof(cdcacm_functional_descriptors)
 } };
 
-static const struct usb_interface_descriptor comm_iface_cdcacm_1[] = {{
-	.bLength = USB_DT_INTERFACE_SIZE,
-	.bDescriptorType = USB_DT_INTERFACE,
-	.bInterfaceNumber = 2,
-	.bAlternateSetting = 0,
-	.bNumEndpoints = 1,
-	.bInterfaceClass = USB_CLASS_CDC,
-	.bInterfaceSubClass = USB_CDC_SUBCLASS_ACM,
-	.bInterfaceProtocol = USB_CDC_PROTOCOL_AT,
-	.iInterface = 0,
-
-	.endpoint = comm_endp_cdcacm_1,
-
-	.extra = &cdcacm_functional_descriptors,
-	.extralen = sizeof(cdcacm_functional_descriptors)
-} };
 
 static const struct usb_interface_descriptor data_iface_cdcacm_0[] = {{
 	.bLength = USB_DT_INTERFACE_SIZE,
@@ -277,20 +188,6 @@ static const struct usb_interface_descriptor data_iface_cdcacm_0[] = {{
 	.endpoint = data_endp_cdcacm_0,
 } };
 
-static const struct usb_interface_descriptor data_iface_cdcacm_1[] = {{
-	.bLength = USB_DT_INTERFACE_SIZE,
-	.bDescriptorType = USB_DT_INTERFACE,
-	.bInterfaceNumber = 3,
-	.bAlternateSetting = 0,
-	.bNumEndpoints = 2,
-	.bInterfaceClass = USB_CLASS_DATA,
-	.bInterfaceSubClass = 0,
-	.bInterfaceProtocol = 0,
-	.iInterface = 0,
-
-	.endpoint = data_endp_cdcacm_1,
-} };
-
 static const struct usb_interface ifaces[] = {
 	{
 		.num_altsetting = 1,
@@ -301,26 +198,13 @@ static const struct usb_interface ifaces[] = {
 		.num_altsetting = 1,
 		.altsetting = data_iface_cdcacm_0,
 	},
-	{
-		.num_altsetting = 1,
-		.iface_assoc = &cdcacm_1_assoc,
-		.altsetting = comm_iface_cdcacm_1,
-	},
-	{
-		.num_altsetting = 1,
-		.altsetting = data_iface_cdcacm_1,
-	},
 };
 
 static const struct usb_config_descriptor config = {
 	.bLength = USB_DT_CONFIGURATION_SIZE,
 	.bDescriptorType = USB_DT_CONFIGURATION,
 	.wTotalLength = 0,
-#if SINGLE_CDCACM
 	.bNumInterfaces = 2,
-#else
-	.bNumInterfaces = 4,
-#endif
 	.bConfigurationValue = 1,
 	.iConfiguration = 0,
 	.bmAttributes = 0x80,
@@ -342,10 +226,85 @@ void SysTick_IRQn_handler( void ) {
   ++systick;
 }
 
-static inline __attribute__((always_inline)) void __WFI(void)
+
+#define SCB_CCR_IC_Msk                     (1UL << SCB_CCR_IC_Pos)  
+#define SCB_CCR_IC_Pos                      17U                                           //!< SCB CCR: Instruction cache enable bit Position 
+#define CCSIDR_SETS(x)         (((x) & SCB_CCSIDR_NUMSETS_Msk      ) >> SCB_CCSIDR_NUMSETS_Pos      )
+#define CCSIDR_WAYS(x)         (((x) & SCB_CCSIDR_ASSOCIATIVITY_Msk) >> SCB_CCSIDR_ASSOCIATIVITY_Pos)
+#define SCB_CCSIDR_NUMSETS_Msk             (0x7FFFUL << SCB_CCSIDR_NUMSETS_Pos)           //!< SCB CCSIDR: NumSets Mask 
+#define SCB_CCSIDR_NUMSETS_Pos             13U                                            //!< SCB CCSIDR: NumSets Position 
+#define SCB_CCR_DC_Pos                      16U                                           //!< SCB CCR: Cache enable bit Position 
+#define SCB_CCR_DC_Msk                     (1UL << SCB_CCR_DC_Pos)                        //!< SCB CCR: DC Mask 
+
+#define SCB_CCSIDR_ASSOCIATIVITY_Pos        3U                                            //!< SCB CCSIDR: Associativity Position 
+#define SCB_CCSIDR_ASSOCIATIVITY_Msk       (0x3FFUL << SCB_CCSIDR_ASSOCIATIVITY_Pos)      //!< SCB CCSIDR: Associativity Mask 
+#define CCSIDR_WAYS(x)         (((x) & SCB_CCSIDR_ASSOCIATIVITY_Msk) >> SCB_CCSIDR_ASSOCIATIVITY_Pos)
+
+#define SCB_DCISW_SET_Pos                   5U                                            //!< SCB DCISW: Set Position 
+#define SCB_DCISW_SET_Msk                  (0x1FFUL << SCB_DCISW_SET_Pos)                 //!< SCB DCISW: Set Mask 
+
+#define SCB_DCISW_WAY_Pos                  30U                                            //!< SCB DCISW: Way Position 
+#define SCB_DCISW_WAY_Msk                  (3UL << SCB_DCISW_WAY_Pos)  
+
+static void __DSB(void)
 {
-	__asm volatile ("wfi");
+	__asm volatile ("dsb 0xF":::"memory");
 }
+
+static void __ISB(void)
+{
+	__asm volatile ("isb 0xF":::"memory");
+}
+
+/*
+static void SCB_EnableICache (void)
+{
+    volatile uint32_t *SCB_ICIALLU =  (volatile uint32_t *)(SCB_BASE + 0x250);
+	__DSB();
+	__ISB();
+	*SCB_ICIALLU = 0UL;                     // invalidate I-Cache 
+	__DSB();
+	__ISB();
+	SCB_CCR |=  (uint32_t)SCB_CCR_IC_Msk;  // enable I-Cache 
+	__DSB();
+	__ISB();
+}
+
+static void SCB_EnableDCache (void)
+{
+    volatile uint32_t *SCB_CCSIDR = (volatile uint32_t *)(SCB_BASE +  0x80);
+	volatile uint32_t *SCB_CSSELR = (volatile uint32_t *)(SCB_BASE +  0x84);
+	volatile uint32_t *SCB_DCISW  =  (volatile uint32_t *)(SCB_BASE + 0x260);
+	
+	uint32_t ccsidr;
+	uint32_t sets;
+	uint32_t ways;
+
+	*SCB_CSSELR = 0U; // (0U << 1U) | 0U; //Level 1 data cache 
+	__DSB();
+
+	ccsidr = *SCB_CCSIDR;
+
+	sets = (uint32_t)(CCSIDR_SETS(ccsidr));
+	do {
+		ways = (uint32_t)(CCSIDR_WAYS(ccsidr));
+		do {
+			*SCB_DCISW = (((sets << SCB_DCISW_SET_Pos) & SCB_DCISW_SET_Msk) |
+					((ways << SCB_DCISW_WAY_Pos) & SCB_DCISW_WAY_Msk)  );
+#if defined ( __CC_ARM )
+			__schedule_barrier();
+#endif
+		} while (ways-- != 0U);
+	} while(sets-- != 0U);
+	__DSB();
+
+	SCB_CCR |=  (uint32_t)SCB_CCR_DC_Msk;  // enable D-Cache 
+
+	__DSB();
+	__ISB();
+}
+*/
+
 
 /*
 void delay_ms( uint32_t ms ) {
@@ -375,6 +334,9 @@ int _write(int file, char *ptr, int len)
 	return -1;
 }
 
+//static void poop(usbd_device *usbd_dev);
+
+//static uint8_t xbuf[7];
 
 static enum usbd_request_return_codes cdcacm_control_request(usbd_device *usbd_dev,
 	struct usb_setup_data *req, uint8_t **buf, uint16_t *len,
@@ -402,43 +364,50 @@ static enum usbd_request_return_codes cdcacm_control_request(usbd_device *usbd_d
 							 return USBD_REQ_HANDLED;
 		case 0x20:
 							 memcpy(xbuf, *buf, 7);
-
-							 return USBD_REQ_HANDLED;
+	/*						 printf("usb buf 0 = %hhn \r\n", buf[0]);
+							 printf("usb buf 1 = %hhn \r\n", buf[1]);
+							 printf("usb buf 2 = %hhn \r\n", buf[2]);
+							 printf("usb buf 3 = %hhn \r\n", buf[3]);
+							 printf("usb buf 4 = %hhn \r\n", buf[4]);
+							 printf("usb buf 5 = %hhn \r\n", buf[5]);
+							 printf("usb buf 6 = %hhn \r\n", buf[6]); */
+//							 poop(usbd_dev);
+                            return USBD_REQ_HANDLED;
 	}
 	return USBD_REQ_NOTSUPP;
 }
+/*
+static void poop(usbd_device *usbd_dev)
+{
+
+int poo;
+
+	poo = usbd_ep_write_packet(usbd_dev, 0x81, xbuf, sizeof xbuf);
+	if (poo) {
+	;
+	}
+}
+*/
 
 static void cdcacm_data_rx_cb(usbd_device *usbd_dev, uint8_t ep)
 {
 int i;
-	/* Locate endpoint data. */
-	for (i = 0; i < CDCACM_INTERFACE_COUNT; i ++)
-		if (incoming_usb_data[i].out_epnum == ep)
-			break;
-	if (i == CDCACM_INTERFACE_COUNT)
-		/* Endpoint not found. */
-		return;
+int len;
+uint8_t buf[CDCACM_PACKET_SIZE] = {0};
 
-	incoming_usb_data[i].len = usbd_ep_read_packet(usbd_dev, ep, incoming_usb_data[i].buf, sizeof incoming_usb_data[i].buf);
-	if (incoming_usb_data[i].len)
-		usbd_ep_nak_set(usbd_dev, ep, 1);
-	avaiable_incoming_endpoints |= 1 << i;
+	len = usbd_ep_read_packet(usbd_dev, ep, buf, sizeof buf);
+	if (len) {
+		while (usbd_ep_write_packet(usbd_dev, 0x81, buf, len) == 0);
+	}
 }
 
 static void cdcacm_set_config(usbd_device *usbd_dev, uint16_t wValue)
 {
 	(void)wValue;
 
-	usbd_ep_setup(usbd_dev, CDCACM_INTERFACE_0_DATA_OUT_ENDPOINT, USB_ENDPOINT_ATTR_BULK, CDCACM_INTERFACE_0_DATA_OUT_ENDPOINT_SIZE, cdcacm_data_rx_cb);
-	usbd_ep_setup(usbd_dev, CDCACM_INTERFACE_0_DATA_IN_ENDPOINT, USB_ENDPOINT_ATTR_BULK, CDCACM_INTERFACE_0_DATA_IN_ENDPOINT_SIZE, NULL);
+	usbd_ep_setup(usbd_dev, CDCACM_INTERFACE_0_DATA_OUT_ENDPOINT, USB_ENDPOINT_ATTR_BULK, CDCACM_PACKET_SIZE, cdcacm_data_rx_cb);
+	usbd_ep_setup(usbd_dev, CDCACM_INTERFACE_0_DATA_IN_ENDPOINT, USB_ENDPOINT_ATTR_BULK, CDCACM_PACKET_SIZE, NULL);
 	usbd_ep_setup(usbd_dev, CDCACM_INTERFACE_0_NOTIFICATION_IN_ENDPOINT, USB_ENDPOINT_ATTR_INTERRUPT, CDCACM_INTERFACE_0_NOTIFICATION_IN_ENDPOINT_SIZE, NULL);
-
-	if (!SINGLE_CDCACM)
-	{
-		usbd_ep_setup(usbd_dev, CDCACM_INTERFACE_1_DATA_OUT_ENDPOINT, USB_ENDPOINT_ATTR_BULK, CDCACM_INTERFACE_1_DATA_OUT_ENDPOINT_SIZE, cdcacm_data_rx_cb);
-		usbd_ep_setup(usbd_dev, CDCACM_INTERFACE_1_DATA_IN_ENDPOINT, USB_ENDPOINT_ATTR_BULK, CDCACM_INTERFACE_1_DATA_IN_ENDPOINT_SIZE, NULL);
-		usbd_ep_setup(usbd_dev, CDCACM_INTERFACE_1_NOTIFICATION_IN_ENDPOINT, USB_ENDPOINT_ATTR_INTERRUPT, CDCACM_INTERFACE_1_NOTIFICATION_IN_ENDPOINT_SIZE, NULL);
-	}
 
 	usbd_register_control_callback(
 				usbd_dev,
@@ -557,6 +526,14 @@ static void gpio_setup(void)
 static void InitLdoAndPll(void) {
   // Clock configuration for this platform.
   // clang-format off
+    gpio_mode_setup(GPIOH, GPIO_MODE_OUTPUT, GPIO_PUPD_PULLUP, GPIO1);
+    gpio_set_output_options(GPIOH, GPIO_OTYPE_PP,
+				GPIO_OSPEED_50MHZ, GPIO1);
+	for (unsigned i = 0; i < 20; i++)
+	  {
+		__asm__("nop");
+	  }
+	  gpio_set(GPIOH, GPIO1);
   static const struct rcc_pll_config pll_config = {
     .sysclock_source  = RCC_PLL,
     .pll_source       = RCC_PLLCKSELR_PLLSRC_HSE,
@@ -571,7 +548,7 @@ static void InitLdoAndPll(void) {
     .pll2 = {
         .divm = 5U,     // 2MHz PLL1 base clock pre-multiplier, cancels post div2.
         .divn = 80U,   // 800MHz for PLL1 to drive the sysclk throu post-div of 2.
-        .divp = 2U,     // PLL1P post-divider gives 400MHz output.
+        .divp = 16U,     // PLL1P post-divider gives 400MHz output.
         .divq = 2U,    // PLL1Q post-divider gives 80MHz output for FDCAN.
         .divr = 2U,    // MAY NEED TO BE 4 FOR SDRAM          // PLL1R are disabled for now.
     },
@@ -580,7 +557,7 @@ static void InitLdoAndPll(void) {
         .divn = 160U,   // 800MHz for PLL1 to drive the sysclk throu post-div of 2.
         .divp = 2U,     // PLL1P post-divider gives 400MHz output.
         .divq = 5U,    // PLL1Q post-divider gives 80MHz output for FDCAN.
-        .divr = 2U,                // PLL1R are disabled for now.
+        .divr = 96U,                // PLL1R are disabled for now.
     },
     // Set CPU to PLL1P output at 480MHz.
     .core_pre  = RCC_D1CFGR_D1CPRE_BYP,
@@ -595,12 +572,15 @@ static void InitLdoAndPll(void) {
   // clang-format on
 rcc_clock_setup_pll(&pll_config);
 
-  // Setup SPI buses to use the HSI clock @ 64MHz for SPI log2 based dividers.
-rcc_set_spi123_clksel(RCC_D2CCIP1R_SPI123SEL_PERCK);  // PERCLK is defaulted to HSI.
-  rcc_set_spi45_clksel(RCC_D2CCIP1R_SPI45SEL_HSI);
-
+//   Setup SPI buses to use the HSI clock @ 64MHz for SPI log2 based dividers.
+    rcc_set_spi123_clksel(RCC_D2CCIP1R_SPI123SEL_PERCK);  // PERCLK is defaulted to HSI.
+    rcc_set_i2c123_clksel(RCC_D2CCIP2R_I2C123SEL_PLL3R);
+    rcc_set_qspi_clksel(RCC_D1CCIPR_QSPISEL_PLL2R);
+//  rcc_set_spi123_clksel(RCC_D2CCIP1R_SPI123SEL_PLL2P);
+//  rcc_set_spi45_clksel(RCC_D2CCIP1R_SPI45SEL_HSI);
+//  rcc_set_peripheral_clk_sel(RCC_BDCR, RCC_BDCR_RTCSEL_LSI);
   // Set CANFD to use PLL1Q set at 80MHz. 
-  rcc_set_fdcan_clksel(RCC_D2CCIP1R_FDCANSEL_PLL1Q);
+//  rcc_set_fdcan_clksel(RCC_D2CCIP1R_FDCANSEL_PLL1Q);
   
   rcc_periph_clock_enable(RCC_USB1OTGHSEN);
   rcc_periph_clock_enable(RCC_USB1OTGHSULPIEN);
@@ -629,6 +609,192 @@ static struct sdram_timing timing = {
 	.txsr = 7,		/* Exit Self Refresh Time */
 	.tmrd = 2,		/* Load to Active Delay */
 };
+
+void spiRelInit(){
+	rcc_periph_clock_enable(RCC_SPI2);
+	    gpio_mode_setup(GPIOC, GPIO_MODE_AF, GPIO_PUPD_NONE,
+        GPIO2
+        |  GPIO3
+    );
+    
+    gpio_set_output_options(GPIOC, GPIO_OTYPE_PP,
+				GPIO_OSPEED_100MHZ, GPIO3);
+	
+	gpio_set_af(GPIOC, GPIO_AF5,
+       GPIO2
+        |  GPIO3
+    );
+				
+	    gpio_mode_setup(GPIOI, GPIO_MODE_AF, GPIO_PUPD_NONE,
+        GPIO0
+        |  GPIO1
+    );
+
+	gpio_set_output_options(GPIOI, GPIO_OTYPE_PP,
+				GPIO_OSPEED_100MHZ, GPIO0 |  GPIO1);
+				
+ 
+
+    gpio_set_af(GPIOI, GPIO_AF5,
+       GPIO0
+        |  GPIO1
+    );
+    
+    gpio_mode_setup(GPIOG, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, GPIO7);
+    gpio_set_output_options(GPIOG, GPIO_OTYPE_PP,
+				GPIO_OSPEED_100MHZ, GPIO7);
+    gpio_mode_setup(GPIOA, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, GPIO8);
+    gpio_set_output_options(GPIOA, GPIO_OTYPE_PP,
+				GPIO_OSPEED_100MHZ, GPIO8);
+    gpio_clear(GPIOA, GPIO8);
+    gpio_mode_setup(GPIOJ, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, GPIO11);
+    gpio_set(GPIOJ, GPIO11);
+}
+
+void spiInit(){
+    spi_disable(SPI2);
+	SPI_CFG2(SPI2) &= ~SPI_CR1_SSI;
+	SPI_CFG2(SPI2) &= ~SPI_CFG2_SSM;
+	SPI_CFG2(SPI2) |= SPI_CFG2_SSOE;
+	spi_init_master(SPI2, SPI_CFG1_MBR_CLK_DIV_4, 0,
+			0, 0);
+	SPI_CFG2(SPI2) &= ~SPI_CR1_SSI;
+	SPI_CFG2(SPI2) &= ~SPI_CFG2_SSM;
+	SPI_CFG2(SPI2) |= SPI_CFG2_SSOE;
+	// CR1
+	// crc calculation zero patterns
+//	SPI_CR1(SPI1) &= ~SPI_CR1_TCRCINI;
+    spi_disable_crc(SPI2);
+	// polynomial not used
+//	SPI_CR1(SPI1) &= ~SPI_CR1_CRC33_17;
+	spi_set_full_duplex_mode(SPI2);
+	spi_set_clock_polarity_0(SPI2);
+	spi_set_clock_phase_1(SPI2);
+//	spi_set_bidirectional_transmit_only_mode(SPI1);
+	// CFG1
+	// master clock /32
+	//SPI_CFG1(SPI1) |= SPI_CFG1_MBR_CLK_DIV_8;
+	// CRC computation disable
+//	SPI_CFG1(SPI1) &= ~SPI_CFG1_CRCEN;
+	// CRCSIZE = 0
+//	SPI_CFG1(SPI1) &= ~SPI_CFG1_CRCSIZE_MASK;
+	// tx dma disable
+//	SPI_CFG1(SPI1) &= ~SPI_CFG1_TXDMAEN;
+	// rx dma disable
+//	SPI_CFG1(SPI1) &= ~SPI_CFG1_RXDMAEN;
+	// fifo threshold level = 1-data
+//	spi_fifo_reception_threshold_8bit(SPI1);
+//	SPI_CFG1(SPI1) &= ~SPI_CFG1_FTHLV_MASK;
+	// Dsize = 8bits
+//	SPI_CFG1(SPI1) &= ~SPI_CFG1_DSIZE_MASK;
+//	SPI_CFG1(SPI1) |= 0x01UL | 0x02UL | 0x04UL;
+ //   spi_enable_software_slave_management(SPI1);
+    spi_set_data_size(SPI2, SPI_CFG1_DSIZE_8BIT);
+//	spi_set_transfer_size(SPI2, 0xFFFF);
+ //   spi_set_transfer_size(SPI1, 1);
+//	spi_set_standard_mode(SPI1, 0);
+	SPI_CFG2(SPI2) &= ~SPI_CR1_SSI;
+	SPI_CFG2(SPI2) &= ~SPI_CFG2_SSM;
+	SPI_CFG2(SPI2) |= SPI_CFG2_SSOE;
+	spi_send_msb_first(SPI2);
+	spi_set_baudrate_prescaler(SPI2, SPI_CFG1_MBR_CLK_DIV_4);
+	// CFG2
+	// SS SW-management of SS, internal state by SSI bit
+//	SPI_CFG2(SPI1) |= SPI_CFG2_SSM;
+//    spi_enable_software_slave_management(SPI1);
+//    spi_set_nss_high(SPI1);
+	// CR1
+	// SS bit high
+	// SPI_CFG2(SPI1) |= SPI_CR1_SSI;
+//	spi_enable_ss_output(SPI1);
+	
+	
+	// SPI master mode
+	SPI_CFG2(SPI2) |= SPI_CFG2_MASTER;
+//	spi_disable(SPI2); 
+	SPI_I2SCFGR(SPI2) &= ~SPI_I2SCFGR_I2SMOD;
+//	spi_set_data_size(SPI2, SPI_CFG1_DSIZE_8BIT); 
+//	spi_set_transfer_size(SPI2, 1); 
+	spi_fifo_reception_threshold_8bit(SPI2); 
+	SPI_CR2(SPI2) = (SPI_CR2(SPI2) & ~(SPI_CR2_TSIZE_MASK << SPI_CR2_TSIZE_SHIFT)) | (8 << SPI_CR2_TSIZE_SHIFT); 
+//	spi_enable(SPI1);
+	// full duplex
+//	SPI_CFG2(SPI1) |= SPI_CFG2_COMM_FULL_DUPLEX;
+//	spi_enable(SPI2);
+}	
+	
+void spi_test(void) {
+uint8_t testdata = 0xFF;
+
+// This value will point limit to HW's counter
+//SPI_CR2(SPI1) |= (SPI_CR2_TSIZE_MASK & sizeof(testdata));
+
+// SPI enable
+//SPI_CR1(SPI1) |= SPI_CR1_SPE;
+
+/*
+
+			If global SPI interrupt needed
+			- Enable it here, after SPI enable (errata)
+			  and before CSTART
+
+*/
+
+// start transmission
+//SPI_CR1(SPI1) |= SPI_CR1_CSTART;
+spi_send8(SPI2, testdata);
+// if TxFIFO has enough free location to host 1 data packet
+// --> put data to TXDR
+//if(((SPI_SR(SPI1)) & SPI_SR_TXP) == SPI_SR_TXP){
+//	*((volatile uint8_t*)&SPI_TXDR(SPI1)) = testdata;
+	
+//}
+
+// wait end of the transmission
+//while(((SPI_SR(SPI1)) & SPI_SR_EOT) != SPI_SR_EOT){};
+	
+// SPI disable (errata)
+//SPI_CR1(SPI1) |= SPI_CR1_SPE;
+
+	
+}
+
+void put_status(char *m)
+{
+	uint16_t stmp;
+
+	printf(m);
+	printf(" Status: ");
+	stmp = SPI_SR(SPI2);
+	if (stmp & SPI_SR_TXC) {
+		printf("TXC, ");
+	}
+	if (stmp & SPI_SR_RXWNE) {
+		printf("RXWNE, ");
+	}
+	if (stmp & SPI_SR_EOT) {
+		printf("EOT, ");
+	}
+	if (stmp & SPI_SR_OVR) {
+		printf("OVERRUN, ");
+	}
+	if (stmp & SPI_SR_MODF) {
+		printf("MODE FAULT, ");
+	}
+	if (stmp & SPI_SR_CRCE) {
+		printf("CRCE, ");
+	}
+	if (stmp & SPI_SR_UDR) {
+		printf("UNDERRUN, ");
+	}
+	if (stmp & SPI_SR_RXP) {
+		printf("READ FINISHED, ");
+	}
+	if (stmp & SPI_SR_TXP) {
+		printf("WRITE FINISHED, ");
+	}
+	printf("\n");
+}
 
 
 int sdramsetup( void ) {
@@ -731,9 +897,12 @@ volatile uint32_t busy_count;
 int main(void)
 {
 	SCB_VTOR = (uint32_t) 0x08040000;
-
+    rcc_periph_clock_enable(RCC_GPIOH);
+    rcc_periph_clock_enable(RCC_SYSCFG);
 	volatile int i;
     InitLdoAndPll();
+//    SCB_EnableICache();
+//	SCB_EnableDCache();
 	/* Enable clocks for LED & USART1. */
 	rcc_periph_clock_enable(RCC_GPIOA);
 	rcc_periph_clock_enable(RCC_GPIOB);
@@ -742,21 +911,41 @@ int main(void)
 	rcc_periph_clock_enable(RCC_GPIOE);
 	rcc_periph_clock_enable(RCC_GPIOF);
 	rcc_periph_clock_enable(RCC_GPIOG);
-	rcc_periph_clock_enable(RCC_GPIOH);
+	
 	rcc_periph_clock_enable(RCC_GPIOI);
 	rcc_periph_clock_enable(RCC_GPIOJ);
 	rcc_periph_clock_enable(RCC_GPIOK);
 
-    gpio_set(GPIOK, GPIO5);
-    gpio_set(GPIOK, GPIO6);
-	gpio_clear(GPIOK, GPIO7);
+
 	/* Enable clocks for USART1. */
 	rcc_periph_clock_enable(RCC_USART1);
 
     gpio_setup();
+    gpio_set(GPIOK, GPIO5);
+    gpio_set(GPIOK, GPIO6);
+	gpio_clear(GPIOK, GPIO7);
     usart_setup();
-    sdramsetup();
 
+    sdramsetup();
+//    qspiinit();
+    put_status("after sdram setup :");
+	spiRelInit();
+	put_status("after spiRelInit setuo :");
+	// SPI register initialization
+	spiInit();
+	put_status("after spiInit setuo :");
+	
+	printf("spi2 clock freq  %ld \r\n", rcc_get_spi_clk_freq(SPI2));
+    printf("qspi clock freq  %ld \r\n", rcc_get_qspi_clk_freq(RCC_QSPI));
+	st_init();
+	put_status("after stInit :");
+	    printf("b4 i2c setup\r\n");
+    i2c_setup();
+     printf("after i2c setup \r\n");
+    i2ctest();
+     printf("after i2c test \r\n");
+ //   spi_test();
+//    printf("after spi test \r\n");
 	usbd_dev = usbd_init(&stm32f207_usb_driver, &dev, &config,
 		usb_strings, 3,
 			usbd_control_buffer, sizeof(usbd_control_buffer));
@@ -768,41 +957,14 @@ int main(void)
     gpio_clear(GPIOK, GPIO5);
     gpio_set(GPIOK, GPIO6);
 	gpio_set(GPIOK, GPIO7);
+	ramtest();
 	while (1) {
     gpio_clear(GPIOK, GPIO5);
     gpio_set(GPIOK, GPIO6);
 	gpio_set(GPIOK, GPIO7);
 	
-	ramtest();
-cm_disable_interrupts();
-		if (avaiable_incoming_endpoints)
-		{
-cm_enable_interrupts();
-			uint8_t buf[MAX_USB_PACKET_SIZE];
-			int len;
-			for (i = 0; i < CDCACM_INTERFACE_COUNT; i ++)
-				if (avaiable_incoming_endpoints & (1 << i))
-				{
-					len = incoming_usb_data[i].len;
-					memcpy(buf, incoming_usb_data[i].buf, len);
-cm_disable_interrupts();
-					avaiable_incoming_endpoints ^= 1 << i;
-					usbd_ep_nak_set(usbd_dev, incoming_usb_data[i].out_epnum, 0);
-cm_enable_interrupts();
-					if (len)
-						while (usbd_ep_write_packet(usbd_dev, incoming_usb_data[i].in_epnum, buf, len) == 0xffff)
-							busy_count ++;
-					if (len == incoming_usb_data[i].max_packet_size)
-					{
-						while (usbd_ep_write_packet(usbd_dev, incoming_usb_data[i].in_epnum, 0, 0) == 0xffff)
-							busy_count ++;
-					}
-				}
-			continue;
-		}
-		// The 'wfi' instruction interferes with debugging, so keep it disabled for the time being.
-		//__asm__("wfi");
-cm_enable_interrupts();
+	
+
 	}
 }
 

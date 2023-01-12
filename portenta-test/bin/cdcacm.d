@@ -27,6 +27,8 @@ bin/cdcacm.o: cdcacm.c /usr/include/newlib/stdlib.h \
  ../libopencm3/include/libopencm3/usb/usbstd.h \
  ../libopencm3/include/libopencm3/usb/cdc.h \
  ../libopencm3/include/libopencm3/cm3/scb.h \
+ ../libopencm3/include/libopencm3/stm32/spi.h \
+ ../libopencm3/include/libopencm3/stm32/h7/spi.h \
  ../libopencm3/include/libopencm3/cm3/nvic.h \
  ../libopencm3/include/libopencm3/dispatch/nvic.h \
  ../libopencm3/include/libopencm3/stm32/h7/nvic.h \
@@ -39,13 +41,14 @@ bin/cdcacm.o: cdcacm.c /usr/include/newlib/stdlib.h \
  ../libopencm3/include/libopencm3/stm32/fsmc.h \
  ../libopencm3/include/libopencm3/stm32/h7/fmc.h \
  ../libopencm3/include/libopencm3/stm32/common/fmc_common_f47.h \
- ../libopencm3/include/libopencm3/cm3/systick.h \
- /usr/include/newlib/string.h /usr/include/newlib/sys/string.h \
- /usr/include/newlib/errno.h /usr/include/newlib/sys/errno.h \
- /usr/include/newlib/stdio.h \
+ ../libopencm3/include/libopencm3/cm3/systick.h st7789_stm32_spi.h \
+ fonts/bitmap_typedefs.h /usr/include/newlib/inttypes.h \
+ /usr/include/newlib/sys/_intsup.h /usr/include/newlib/stdio.h \
  /usr/lib/gcc/arm-none-eabi/9.2.1/include/stdarg.h \
  /usr/include/newlib/sys/types.h /usr/include/newlib/sys/_stdint.h \
  /usr/include/newlib/sys/_pthreadtypes.h \
  /usr/include/newlib/machine/types.h /usr/include/newlib/sys/stdio.h \
+ /usr/include/newlib/string.h /usr/include/newlib/sys/string.h \
+ /usr/include/newlib/errno.h /usr/include/newlib/sys/errno.h \
  /usr/include/newlib/unistd.h /usr/include/newlib/sys/unistd.h \
- /usr/include/newlib/ctype.h cdc.h
+ /usr/include/newlib/ctype.h cdc.h qspi.h test_i2c.h

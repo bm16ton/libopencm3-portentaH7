@@ -265,6 +265,23 @@ uint32_t rcc_get_bus_clk_freq(enum rcc_clock_source source) {
 	}
 }
 
+uint32_t rcc_get_qspi_clk_freq(uint32_t qspi  __attribute__((unused)))
+{
+	uint32_t clksel =
+		(RCC_D2CCIP1R >> RCC_D1CCIPR_QSPISEL_SHIFT) & RCC_D1CCIPR_QSPISEL_MASK;
+	if (clksel == RCC_D1CCIPR_QSPISEL_HCLK3) {
+		return rcc_clock_tree.hclk_mhz * HZ_PER_MHZ;
+	} else if (clksel == RCC_D1CCIPR_QSPISEL_PLL1Q) {
+		return rcc_clock_tree.pll1.q_mhz * HZ_PER_MHZ;
+	} else if (clksel == RCC_D1CCIPR_QSPISEL_PLL2R) {
+		return rcc_clock_tree.pll2.r_mhz * HZ_PER_MHZ;
+	} else if (clksel == RCC_D1CCIPR_QSPISEL_PERCK) {
+		return rcc_get_bus_clk_freq(RCC_PERCLK);
+	} else {
+		return 0U;
+	}
+}
+
 uint32_t rcc_get_usart_clk_freq(uint32_t usart)
 {
 	uint32_t clksel, pclk;
@@ -304,13 +321,25 @@ uint32_t rcc_get_timer_clk_freq(uint32_t timer __attribute__((unused)))
 
 uint32_t rcc_get_i2c_clk_freq(uint32_t i2c)
 {
+    uint32_t clksel =
+    (RCC_D2CCIP2R >> RCC_D2CCIP2R_I2C123SEL_SHIFT) & RCC_D2CCIP2R_I2C123SEL_MASK;
 	if (i2c == I2C4_BASE) {
 		/* TODO: Read I2C4SEL from D3CCIPR to determine clock source. */
 		return rcc_clock_tree.per.pclk3_mhz * HZ_PER_MHZ;
 	} else {
+	if (clksel == RCC_D2CCIP2R_I2C123SEL_PCLK1){
 		/* TODO: Read I2C123SEL from D2CCIP2R to determine clock source. */
 		return rcc_clock_tree.per.pclk1_mhz * HZ_PER_MHZ;
 	}
+	if (clksel == RCC_D2CCIP2R_I2C123SEL_PLL3R){
+	    return rcc_clock_tree.pll3.r_mhz * HZ_PER_MHZ;	
+	}
+	if (clksel == RCC_D2CCIP2R_I2C123SEL_HSI){
+	    return RCC_HSI_BASE_FREQUENCY;
+	} else {
+		return 0U;
+	}
+  }
 }
 
 uint32_t rcc_get_spi_clk_freq(uint32_t spi)
@@ -369,17 +398,29 @@ void rcc_set_peripheral_clk_sel(uint32_t periph, uint32_t sel) {
 	uint32_t val;
 
 	switch (periph) {
+	    case I2C1_BASE:
+		case I2C2_BASE:
+		case I2C3_BASE:
+			reg = &RCC_D2CCIP2R;
+			mask = RCC_D2CCIP2R_I2C123SEL_MASK << RCC_D2CCIP2R_I2C123SEL_SHIFT;
+			val = sel << RCC_D2CCIP2R_I2C123SEL_SHIFT;
+			break;
 		case FDCAN1_BASE:
 		case FDCAN2_BASE:
 			reg = &RCC_D2CCIP1R;
 			mask = RCC_D2CCIP1R_FDCANSEL_MASK << RCC_D2CCIP1R_FDCANSEL_SHIFT;
 			val = sel << RCC_D2CCIP1R_FDCANSEL_SHIFT;
 			break;
+		case QUADSPI_BASE:
+		    reg	= &RCC_D2CCIP1R;
+		    mask = RCC_D1CCIPR_QSPISEL_MASK << RCC_D1CCIPR_QSPISEL_SHIFT;
+			val = sel << RCC_D1CCIPR_QSPISEL_SHIFT;
+			break;
 		case RNG_BASE:
-		  reg = &RCC_D2CCIP2R;
-		  mask = RCC_D2CCIP2R_RNGSEL_MASK << RCC_D2CCIP2R_RNGSEL_SHIFT;
-		  val = sel << RCC_D2CCIP2R_RNGSEL_SHIFT;
-		  break;
+		    reg = &RCC_D2CCIP2R;
+		    mask = RCC_D2CCIP2R_RNGSEL_MASK << RCC_D2CCIP2R_RNGSEL_SHIFT;
+		    val = sel << RCC_D2CCIP2R_RNGSEL_SHIFT;
+		    break;
 		case SPI1_BASE:
 		case SPI2_BASE:
 		case SPI3_BASE:
@@ -418,6 +459,16 @@ void rcc_set_peripheral_clk_sel(uint32_t periph, uint32_t sel) {
 	// Update the register value by masking and oring in new values.
 	uint32_t regval = (*reg & mask) | val;
 	*reg = regval;
+}
+
+void rcc_set_i2c123_clksel(uint8_t clksel) {
+	RCC_D2CCIP2R &= ~(RCC_D2CCIP2R_I2C123SEL_MASK << RCC_D2CCIP2R_I2C123SEL_SHIFT);
+	RCC_D2CCIP2R |= clksel << RCC_D2CCIP2R_I2C123SEL_SHIFT;
+}
+
+void rcc_set_qspi_clksel(uint8_t clksel) {
+	RCC_D2CCIP1R &= ~(RCC_D1CCIPR_QSPISEL_MASK << RCC_D1CCIPR_QSPISEL_SHIFT);
+	RCC_D2CCIP1R |= clksel << RCC_D1CCIPR_QSPISEL_SHIFT;
 }
 
 void rcc_set_fdcan_clksel(uint8_t clksel) {

@@ -1,3 +1,7 @@
+UPDATE: I2C now works, clock set/get added for i2c and qspi.
+
+CURRENTLY WORKS: USBHS, i2c, external sdram, clock set and get for i2c/qspi.
+
 Basic example of portenta h7 with libopencm3. IMPORTANT you must use the libopencm3 folder found in this repo and set device as stm32h747 with no trailing charactors. This example enumerates as usbcdc, initializes UART1 PA9/PA10 , inits the 8mb external ram. If performs basic read/write to ram and send results over USART1. The usbcdc in standard usbcdc example fashion sends back everything you type/send to it. 
 
 For new projects, as mentioned use this repos libopencm3 and defone chip[ in your Makefile as "stm32h747". In the main .c file setup the ulpi gpio IE.

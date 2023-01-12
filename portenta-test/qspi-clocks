@@ -1,0 +1,6 @@
+RCC_D1CCIPR
+Bits 5:4 QSPISEL[1:0]: QUADSPI kernel clock source selection
+00: rcc_hclk3 clock selected as kernel peripheral clock (default after reset)
+01: pll1_q_ck clock selected as kernel peripheral clock
+10: pll2_r_ck clock selected as kernel peripheral clock
+11: per_ck clock selected as kernel peripheral clock

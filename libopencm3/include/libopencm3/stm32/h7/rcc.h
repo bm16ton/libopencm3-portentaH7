@@ -343,6 +343,11 @@ LGPL License Terms @ref lgpl_license
 #define RCC_D1CCIPR_CKPERSEL_HSE       2
 #define RCC_D1CCIPR_CKPERSEL_DISABLE   3
 /**@}*/
+#define RCC_D1CCIPR_QSPISEL_SHIFT     4
+#define RCC_D1CCIPR_QSPISEL_MASK      0x3
+#define RCC_D1CCIPR_QSPISEL           RCC_D1CCIPR_QSPISEL_MASK
+#define RCC_D1CCIPR_QSPISEL_0         0x1
+#define RCC_D1CCIPR_QSPISEL_1         0x2
 #define RCC_D1CCIPR_CKPERSEL_SHIFT     28
 #define RCC_D1CCIPR_CKPERSEL_MASK      3
 
@@ -361,6 +366,10 @@ LGPL License Terms @ref lgpl_license
 /** @defgroup rcc_d2ccip1r_values RCC_D2CCIP1R Values
  * @ingroup rcc_registers
  * @{*/
+#define RCC_D1CCIPR_QSPISEL_HCLK3       0x0
+#define RCC_D1CCIPR_QSPISEL_PLL1Q       0x1
+#define RCC_D1CCIPR_QSPISEL_PLL2R       0x2
+#define RCC_D1CCIPR_QSPISEL_PERCK       0x3
 #define RCC_D2CCIP1R_SWPSEL_PCLK        0x0
 #define RCC_D2CCIP1R_SWPSEL_HSI         0x1
 #define RCC_D2CCIP1R_FDCANSEL_HSE       0x0
@@ -394,6 +403,10 @@ LGPL License Terms @ref lgpl_license
 #define RCC_D2CCIP2R_CECSEL_SHIFT           22
 #define RCC_D2CCIP2R_USBSEL_SHIFT           20
 #define RCC_D2CCIP2R_I2C123SEL_SHIFT        12
+#define RCC_D2CCIP2R_I2C123SEL_MASK         0x3
+#define RCC_D2CCIP2R_I2C123SEL              RCC_D2CCIP2R_I2C123SEL_MASK
+#define RCC_D2CCIP2R_I2C123SEL_0            0x1
+#define RCC_D2CCIP2R_I2C123SEL_1            0x2
 #define RCC_D2CCIP2R_RNGSEL_MASK            0x3
 #define RCC_D2CCIP2R_RNGSEL_SHIFT           8
 #define RCC_D2CCIP2R_USART16SEL_SHIFT       3
@@ -415,6 +428,10 @@ LGPL License Terms @ref lgpl_license
 #define RCC_D2CCIP2R_USARTSEL_HSI           3
 #define RCC_D2CCIP2R_USARTSEL_CSI           4
 #define RCC_D2CCIP2R_USARTSEL_LSE           5
+#define RCC_D2CCIP2R_I2C123SEL_PCLK1        0
+#define RCC_D2CCIP2R_I2C123SEL_PLL3R        1
+#define RCC_D2CCIP2R_I2C123SEL_HSI          2
+#define RCC_D2CCIP2R_I2C123SEL_CSI          3
 /**@}*/
 
 
@@ -752,6 +769,7 @@ uint32_t rcc_get_timer_clk_freq(uint32_t timer);
  */
 uint32_t rcc_get_i2c_clk_freq(uint32_t i2c);
 
+uint32_t rcc_get_qspi_clk_freq(uint32_t qspi  __attribute__((unused)));
 /**
  * Get the peripheral clock speed for the SPI device at base specified.
  * @param spi  Base address of SPI device to get clock frequency for (e.g. SPI1_BASE).
@@ -794,6 +812,11 @@ void rcc_set_fdcan_clksel(uint8_t clksel);
  * appropriate for the SPI1/2/3 peripherals, eg RCC_D2CCIP1R_SPI123_XXX
  * @sa rcc_set_peripheral_clk_sel for equivalent generic functionality
  */
+ 
+void rcc_set_i2c123_clksel(uint8_t clksel); 
+ 
+void rcc_set_qspi_clksel(uint8_t clksel);
+ 
 void rcc_set_spi123_clksel(uint8_t clksel);
 
 /**

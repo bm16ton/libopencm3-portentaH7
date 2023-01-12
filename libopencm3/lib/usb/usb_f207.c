@@ -94,7 +94,7 @@ rcc_periph_clock_enable(RCC_OTGHSULPI);
     OTG_HS_DCTL &= ~OTG_DCTL_SDIS;
 
 	/* Force peripheral only mode. */
-    OTG_HS_GUSBCFG |= OTG_GUSBCFG_FDMOD | OTG_GUSBCFG_TRDT_MASK;
+    OTG_HS_GUSBCFG |= OTG_GUSBCFG_FDMOD | OTG_GUSBCFG_TRDT_MASK;  //why did i add this again?? probly lack of sleep will checkout later
     
     OTG_HS_GINTSTS |= OTG_GINTSTS_MMIS;
 
