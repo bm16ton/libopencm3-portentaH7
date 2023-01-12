@@ -345,11 +345,18 @@ LGPL License Terms @ref lgpl_license
 /**@}*/
 #define RCC_D1CCIPR_QSPISEL_SHIFT     4
 #define RCC_D1CCIPR_QSPISEL_MASK      0x3
-#define RCC_D1CCIPR_QSPISEL           RCC_D1CCIPR_QSPISEL_MASK
-#define RCC_D1CCIPR_QSPISEL_0         0x1
-#define RCC_D1CCIPR_QSPISEL_1         0x2
 #define RCC_D1CCIPR_CKPERSEL_SHIFT     28
 #define RCC_D1CCIPR_CKPERSEL_MASK      3
+#define RCC_D1CCIPR_FMCSEL_SHIFT        0
+#define RCC_D1CCIPR_FMCSEL_MASK         0x3
+#define RCC_D1CCIPR_FMCSEL_HCLK3       0x0
+#define RCC_D1CCIPR_FMCSEL_PLL1Q       0x1
+#define RCC_D1CCIPR_FMCSEL_PLL2R       0x2
+#define RCC_D1CCIPR_FMCSEL_PERCK       0x3
+#define RCC_D1CCIPR_QSPISEL_HCLK3       0x0
+#define RCC_D1CCIPR_QSPISEL_PLL1Q       0x1
+#define RCC_D1CCIPR_QSPISEL_PLL2R       0x2
+#define RCC_D1CCIPR_QSPISEL_PERCK       0x3
 
 #define RCC_D2CCIP1R_SWPSEL_SHIFT       31
 #define RCC_D2CCIP1R_FDCANSEL_SHIFT     28
@@ -366,10 +373,7 @@ LGPL License Terms @ref lgpl_license
 /** @defgroup rcc_d2ccip1r_values RCC_D2CCIP1R Values
  * @ingroup rcc_registers
  * @{*/
-#define RCC_D1CCIPR_QSPISEL_HCLK3       0x0
-#define RCC_D1CCIPR_QSPISEL_PLL1Q       0x1
-#define RCC_D1CCIPR_QSPISEL_PLL2R       0x2
-#define RCC_D1CCIPR_QSPISEL_PERCK       0x3
+
 #define RCC_D2CCIP1R_SWPSEL_PCLK        0x0
 #define RCC_D2CCIP1R_SWPSEL_HSI         0x1
 #define RCC_D2CCIP1R_FDCANSEL_HSE       0x0
@@ -770,6 +774,8 @@ uint32_t rcc_get_timer_clk_freq(uint32_t timer);
 uint32_t rcc_get_i2c_clk_freq(uint32_t i2c);
 
 uint32_t rcc_get_qspi_clk_freq(uint32_t qspi  __attribute__((unused)));
+
+uint32_t rcc_get_fmc_clk_freq(uint32_t fmc  __attribute__((unused)));
 /**
  * Get the peripheral clock speed for the SPI device at base specified.
  * @param spi  Base address of SPI device to get clock frequency for (e.g. SPI1_BASE).
@@ -816,6 +822,8 @@ void rcc_set_fdcan_clksel(uint8_t clksel);
 void rcc_set_i2c123_clksel(uint8_t clksel); 
  
 void rcc_set_qspi_clksel(uint8_t clksel);
+ 
+void rcc_set_fmc_clksel(uint8_t clksel);
  
 void rcc_set_spi123_clksel(uint8_t clksel);
 

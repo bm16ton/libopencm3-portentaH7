@@ -22,6 +22,7 @@
 
 #include <libopencm3/stm32/rcc.h>
 #include <libopencm3/stm32/gpio.h>
+#include <libopencm3/stm32/rtc.h>
 #include <libopencm3/usb/usbd.h>
 #include <libopencm3/usb/cdc.h>
 #include <libopencm3/cm3/scb.h>
@@ -32,6 +33,7 @@
 #include <libopencm3/stm32/usart.h>
 #include <libopencm3/stm32/fsmc.h>
 #include <libopencm3/cm3/systick.h>
+#include <libopencm3/stm32/i2c.h>
 #include "st7789_stm32_spi.h"
 #include <string.h>
 #include <errno.h>
@@ -334,9 +336,69 @@ int _write(int file, char *ptr, int len)
 	return -1;
 }
 
+
+
 //static void poop(usbd_device *usbd_dev);
+bool rtc_init_flag_is_ready(void)
+{
+	return (RTC_ISR & RTC_ISR_INITF);
+}
+
+void usbuart_set_line_coding(struct usb_cdc_line_coding *coding);
 
 //static uint8_t xbuf[7];
+void usbuart_set_line_coding(struct usb_cdc_line_coding *coding)
+{
+printf("baud = %ld\r\n", coding->dwDTERate);
+if (coding->dwDTERate == 1200) {
+printf("entered reboot function \r\n");
+rcc_periph_clock_enable(RCC_RTCAPB);
+PWR_CR1 |= PWR_CR1_DBP;
+RTC_WPR = 0XCA;
+RTC_WPR = 0X53;
+RTC_ISR |= RTC_ISR_INIT;
+while (!rtc_init_flag_is_ready());
+printf("done waiting for rtc init, now setting magicboot");
+RTC_BKPXR(0) = 0xDF59;
+scb_reset_system();
+}
+//todo add usb to uart
+/*
+	usart_set_baudrate(USBUSART, coding->dwDTERate);
+
+	if (coding->bParityType)
+		usart_set_databits(USBUSART, (coding->bDataBits + 1 <= 8 ? 8 : 9));
+	else
+		usart_set_databits(USBUSART, (coding->bDataBits <= 8 ? 8 : 9));
+
+	switch(coding->bCharFormat) {
+	case 0:
+		usart_set_stopbits(USBUSART, USART_STOPBITS_1);
+		break;
+	case 1:
+		usart_set_stopbits(USBUSART, USART_STOPBITS_1_5);
+		break;
+	case 2:
+	default:
+		usart_set_stopbits(USBUSART, USART_STOPBITS_2);
+		break;
+	}
+
+	switch(coding->bParityType) {
+	case 0:
+		usart_set_parity(USBUSART, USART_PARITY_NONE);
+		break;
+	case 1:
+		usart_set_parity(USBUSART, USART_PARITY_ODD);
+		break;
+	case 2:
+	default:
+		usart_set_parity(USBUSART, USART_PARITY_EVEN);
+		break;
+	}
+	*/
+}
+
 
 static enum usbd_request_return_codes cdcacm_control_request(usbd_device *usbd_dev,
 	struct usb_setup_data *req, uint8_t **buf, uint16_t *len,
@@ -362,17 +424,11 @@ static enum usbd_request_return_codes cdcacm_control_request(usbd_device *usbd_d
 								 return USBD_REQ_NOTSUPP;
 							 memcpy(*buf, xbuf, 7);
 							 return USBD_REQ_HANDLED;
-		case 0x20:
-							 memcpy(xbuf, *buf, 7);
-	/*						 printf("usb buf 0 = %hhn \r\n", buf[0]);
-							 printf("usb buf 1 = %hhn \r\n", buf[1]);
-							 printf("usb buf 2 = %hhn \r\n", buf[2]);
-							 printf("usb buf 3 = %hhn \r\n", buf[3]);
-							 printf("usb buf 4 = %hhn \r\n", buf[4]);
-							 printf("usb buf 5 = %hhn \r\n", buf[5]);
-							 printf("usb buf 6 = %hhn \r\n", buf[6]); */
-//							 poop(usbd_dev);
-                            return USBD_REQ_HANDLED;
+		case USB_CDC_REQ_SET_LINE_CODING:
+		    if (*len < sizeof(struct usb_cdc_line_coding))
+			    return USBD_REQ_NOTSUPP;
+		    usbuart_set_line_coding((struct usb_cdc_line_coding *)*buf);
+		    return USBD_REQ_HANDLED;
 	}
 	return USBD_REQ_NOTSUPP;
 }
@@ -958,6 +1014,11 @@ int main(void)
     gpio_set(GPIOK, GPIO6);
 	gpio_set(GPIOK, GPIO7);
 	ramtest();
+	printf("spi2 clock freq  %ld \r\n", rcc_get_spi_clk_freq(SPI2));
+    printf("qspi clock freq  %ld \r\n", rcc_get_qspi_clk_freq(RCC_QSPI));
+	printf("fmc clock freq  %ld \r\n", rcc_get_fmc_clk_freq(RCC_FMC));
+	printf("i2c3 clock = %ld \r\n", rcc_get_i2c_clk_freq(I2C3));
+	printf("usart1 clock = %ld \r\n", rcc_get_usart_clk_freq(USART1));
 	while (1) {
     gpio_clear(GPIOK, GPIO5);
     gpio_set(GPIOK, GPIO6);

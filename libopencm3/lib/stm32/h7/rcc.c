@@ -282,6 +282,23 @@ uint32_t rcc_get_qspi_clk_freq(uint32_t qspi  __attribute__((unused)))
 	}
 }
 
+uint32_t rcc_get_fmc_clk_freq(uint32_t fmc  __attribute__((unused)))
+{
+	uint32_t clksel =
+		(RCC_D2CCIP1R >> RCC_D1CCIPR_FMCSEL_SHIFT) & RCC_D1CCIPR_FMCSEL_MASK;
+	if (clksel == RCC_D1CCIPR_FMCSEL_HCLK3) {
+		return rcc_clock_tree.hclk_mhz * HZ_PER_MHZ;
+	} else if (clksel == RCC_D1CCIPR_FMCSEL_PLL1Q) {
+		return rcc_clock_tree.pll1.q_mhz * HZ_PER_MHZ;
+	} else if (clksel == RCC_D1CCIPR_FMCSEL_PLL2R) {
+		return rcc_clock_tree.pll2.r_mhz * HZ_PER_MHZ;
+	} else if (clksel == RCC_D1CCIPR_FMCSEL_PERCK) {
+		return rcc_get_bus_clk_freq(RCC_PERCLK);
+	} else {
+		return 0U;
+	}
+}
+
 uint32_t rcc_get_usart_clk_freq(uint32_t usart)
 {
 	uint32_t clksel, pclk;
@@ -416,6 +433,11 @@ void rcc_set_peripheral_clk_sel(uint32_t periph, uint32_t sel) {
 		    mask = RCC_D1CCIPR_QSPISEL_MASK << RCC_D1CCIPR_QSPISEL_SHIFT;
 			val = sel << RCC_D1CCIPR_QSPISEL_SHIFT;
 			break;
+		case FMC_BASE:
+		    reg	= &RCC_D2CCIP1R;
+		    mask = RCC_D1CCIPR_FMCSEL_MASK << RCC_D1CCIPR_FMCSEL_SHIFT;
+			val = sel << RCC_D1CCIPR_FMCSEL_SHIFT;
+			break;
 		case RNG_BASE:
 		    reg = &RCC_D2CCIP2R;
 		    mask = RCC_D2CCIP2R_RNGSEL_MASK << RCC_D2CCIP2R_RNGSEL_SHIFT;
@@ -469,6 +491,11 @@ void rcc_set_i2c123_clksel(uint8_t clksel) {
 void rcc_set_qspi_clksel(uint8_t clksel) {
 	RCC_D2CCIP1R &= ~(RCC_D1CCIPR_QSPISEL_MASK << RCC_D1CCIPR_QSPISEL_SHIFT);
 	RCC_D2CCIP1R |= clksel << RCC_D1CCIPR_QSPISEL_SHIFT;
+}
+
+void rcc_set_fmc_clksel(uint8_t clksel) {
+	RCC_D2CCIP1R &= ~(RCC_D1CCIPR_FMCSEL_MASK << RCC_D1CCIPR_FMCSEL_SHIFT);
+	RCC_D2CCIP1R |= clksel << RCC_D1CCIPR_FMCSEL_SHIFT;
 }
 
 void rcc_set_fdcan_clksel(uint8_t clksel) {
