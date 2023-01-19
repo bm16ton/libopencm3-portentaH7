@@ -1,3 +1,7 @@
+UPLOAD SCRIPT; Just a basic upload script, does need the example from listSerialPortsC for autodetecting which usb-2-serial is the portenta. In firmware the timing on unlocking/writing the rtc backup registers seems to be important/specific, currently sum nops and a printf are serving that purpose and are close enuff to work 98% of the time. If it simply reboots without entering bootloader just run the upload script again and it should work, no idea why the timen is slightly diff on sum attempts keeping the registers from being written to. 
+
+UPDATE: SPI now works tested on ili9241 (thanks to https://github.com/libopencm3/libopencm3/issues/1392), The example also now reboots to bootloader on baud rate change 1200, and auto reboots back. RTC backup registers can unlock/edit for bootloader. I think maybe another clock set/get was added but dont remember atm. QSPI flash should be working, think I need to figure out the last of the mapping stuff to test (need to be added to ld? seems likely, never used external flash before so need to readup). The dma headers copied into the stm32h7 lib folder are just for the bare basic register info to hopefully get a bare metal dma example working, doubtful if not impossible that some of the ones I dont require for such a task are totally incorrect.(So dont trust/use them without checking first).
+
 UPDATE: I2C now works, clock set/get added for i2c and qspi.
 
 CURRENTLY WORKS: USBHS, i2c, external sdram, clock set and get for i2c/qspi.
