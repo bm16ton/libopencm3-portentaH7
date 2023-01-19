@@ -41,7 +41,7 @@
 #include <unistd.h>
 #include <ctype.h>
 #include "cdc.h"
-#include "qspi.h"
+#include "qspi2.h"
 #include "test_i2c.h"
 
 /* Define this to nonzero, to have only one cdcacm interaface (usb serial port) active. */
@@ -217,7 +217,7 @@ static const struct usb_config_descriptor config = {
 
 static const char * usb_strings[] = {
 	"Black Sphere Technologies",
-	"CDC-ACM Demo",
+	"Envie",
 	"DEMO",
 };
 
@@ -248,6 +248,7 @@ void SysTick_IRQn_handler( void ) {
 #define SCB_DCISW_WAY_Pos                  30U                                            //!< SCB DCISW: Way Position 
 #define SCB_DCISW_WAY_Msk                  (3UL << SCB_DCISW_WAY_Pos)  
 
+/*
 static void __DSB(void)
 {
 	__asm volatile ("dsb 0xF":::"memory");
@@ -257,6 +258,39 @@ static void __ISB(void)
 {
 	__asm volatile ("isb 0xF":::"memory");
 }
+*/
+static inline __attribute__((always_inline)) void __WFI(void)
+{
+	__asm volatile ("wfi");
+}
+
+void delay_ms( uint32_t ms ) {
+  // Calculate the 'end of delay' tick value, then wait for it.
+  uint32_t next = systick + ms;
+  while ( systick < next ) { __WFI(); }
+}
+
+uint32_t SysTick_Config(uint32_t ticks)
+{
+//  if ((ticks - 1UL) > SysTick_LOAD_RELOAD_Msk)
+//  {
+//    return (1UL);                                                   /* Reload value impossible */
+//  }
+(void)ticks;
+systick_set_reload(400000000-1);
+//  SysTick->LOAD  = (uint32_t)(ticks - 1UL);                         /* set reload register */
+//  NVIC_SetPriority (SysTick_IRQn, (1UL << __NVIC_PRIO_BITS) - 1UL); /* set Priority for Systick Interrupt */
+ // SysTick->VAL   = 0UL;                                             /* Load the SysTick Counter Value */
+  	systick_counter_enable();
+  	systick_set_clocksource(STK_CSR_CLKSOURCE_AHB);
+  		systick_interrupt_enable();
+//  SysTick->CTRL  = SysTick_CTRL_CLKSOURCE_Msk |
+//                   SysTick_CTRL_TICKINT_Msk   |
+//                   SysTick_CTRL_ENABLE_Msk;                         /* Enable SysTick IRQ and SysTick Timer */
+  return (0UL);                                                     /* Function successful */
+}
+
+
 
 /*
 static void SCB_EnableICache (void)
@@ -354,12 +388,29 @@ if (coding->dwDTERate == 1200) {
 printf("entered reboot function \r\n");
 rcc_periph_clock_enable(RCC_RTCAPB);
 PWR_CR1 |= PWR_CR1_DBP;
+__asm( "NOP" );
+__asm( "NOP" );
+__asm( "NOP" );
 RTC_WPR = 0XCA;
+__asm( "NOP" );
+__asm( "NOP" );
+__asm( "NOP" );
 RTC_WPR = 0X53;
+__asm( "NOP" );
+__asm( "NOP" );
+__asm( "NOP" );
 RTC_ISR |= RTC_ISR_INIT;
+__asm( "NOP" );
 while (!rtc_init_flag_is_ready());
 printf("done waiting for rtc init, now setting magicboot");
+__asm( "NOP" );
+__asm( "NOP" );
+__asm( "NOP" );
+__asm( "NOP" );
 RTC_BKPXR(0) = 0xDF59;
+__asm( "NOP" );
+__asm( "NOP" );
+__asm( "NOP" );
 scb_reset_system();
 }
 //todo add usb to uart
@@ -604,7 +655,7 @@ static void InitLdoAndPll(void) {
     .pll2 = {
         .divm = 5U,     // 2MHz PLL1 base clock pre-multiplier, cancels post div2.
         .divn = 80U,   // 800MHz for PLL1 to drive the sysclk throu post-div of 2.
-        .divp = 16U,     // PLL1P post-divider gives 400MHz output.
+        .divp = 32U,     // PLL1P post-divider gives 400MHz output.
         .divq = 2U,    // PLL1Q post-divider gives 80MHz output for FDCAN.
         .divr = 2U,    // MAY NEED TO BE 4 FOR SDRAM          // PLL1R are disabled for now.
     },
@@ -629,7 +680,7 @@ static void InitLdoAndPll(void) {
 rcc_clock_setup_pll(&pll_config);
 
 //   Setup SPI buses to use the HSI clock @ 64MHz for SPI log2 based dividers.
-    rcc_set_spi123_clksel(RCC_D2CCIP1R_SPI123SEL_PERCK);  // PERCLK is defaulted to HSI.
+    rcc_set_spi123_clksel(RCC_D2CCIP1R_SPI123SEL_PLL2P);  // PERCLK is defaulted to HSI.
     rcc_set_i2c123_clksel(RCC_D2CCIP2R_I2C123SEL_PLL3R);
     rcc_set_qspi_clksel(RCC_D1CCIPR_QSPISEL_PLL2R);
 //  rcc_set_spi123_clksel(RCC_D2CCIP1R_SPI123SEL_PLL2P);
@@ -674,7 +725,7 @@ void spiRelInit(){
     );
     
     gpio_set_output_options(GPIOC, GPIO_OTYPE_PP,
-				GPIO_OSPEED_100MHZ, GPIO3);
+				GPIO_OSPEED_100MHZ, GPIO2 | GPIO3);
 	
 	gpio_set_af(GPIOC, GPIO_AF5,
        GPIO2
@@ -696,6 +747,10 @@ void spiRelInit(){
         |  GPIO1
     );
     
+    gpio_mode_setup(GPIOC, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, GPIO6);
+    gpio_set_output_options(GPIOC, GPIO_OTYPE_PP,
+				GPIO_OSPEED_100MHZ, GPIO6);
+	gpio_clear(GPIOC, GPIO6);
     gpio_mode_setup(GPIOG, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, GPIO7);
     gpio_set_output_options(GPIOG, GPIO_OTYPE_PP,
 				GPIO_OSPEED_100MHZ, GPIO7);
@@ -708,7 +763,7 @@ void spiRelInit(){
 }
 
 void spiInit(){
-    spi_disable(SPI2);
+/*    spi_disable(SPI2);
 	SPI_CFG2(SPI2) &= ~SPI_CR1_SSI;
 	SPI_CFG2(SPI2) &= ~SPI_CFG2_SSM;
 	SPI_CFG2(SPI2) |= SPI_CFG2_SSOE;
@@ -777,8 +832,86 @@ void spiInit(){
 	// full duplex
 //	SPI_CFG2(SPI1) |= SPI_CFG2_COMM_FULL_DUPLEX;
 //	spi_enable(SPI2);
+*/
+
+
+
+
+/*
+    SPI_CR1(SPI2) = 0;
+
+    SPI_CFG1(SPI2) = (0u << SPI_CFG1_MBR_SHIFT) |
+                 (7u << SPI_CFG1_CRCSIZE_SHIFT) |
+                 //SPI_CFG1_TXDMAEN | // SPI_CFG1_RXDMAEN |
+                 (7u << SPI_CFG1_FTHLV_SHIFT) |
+                 (7u << SPI_CFG1_DSIZE_SHIFT)
+                 ;
+
+    SPI_CFG1(SPI2) |= SPI_CFG1_MBR_CLK_DIV_2;
+    spi_disable_crc(SPI2);
+//    spi_set_transfer_size(SPI2, 0xFFFF); 
+    spi_set_data_size(SPI2, SPI_CFG1_DSIZE_8BIT);
+    SPI_CFG2(SPI2) = SPI_CFG2_SSOE |
+                 SPI_CFG2_MASTER 
+                 ;      
+      
+ //   spi_enable_ss_output(SPI2);
+
+//     spi_fifo_reception_threshold_16bit(SPI2);
+    spi_set_clock_phase_0(SPI2); 
+    spi_set_clock_polarity_0(SPI2);           
+    spi_send_msb_first(SPI2);
+    spi_disable_tx_buffer_empty_interrupt(SPI2);
+    spi_enable_rx_buffer_not_empty_interrupt(SPI2);
+    spi_disable_error_interrupt(SPI2);
+    spi_fifo_reception_threshold_8bit(SPI2);
+//	SPI_CR2(SPI2) = (SPI_CR2(SPI2) & ~(SPI_CR2_TSIZE_MASK << SPI_CR2_TSIZE_SHIFT))
+//		| (0xFFFF << SPI_CR2_TSIZE_SHIFT);
+//    SPI_CR2(SPI2) |= 1;
+    SPI_CR1(SPI2) |= SPI_CR1_SPE;
+    SPI_CR1(SPI2) |= SPI_CR1_CSTART;
+*/
+
+
+
+spi_reset(SPI2);
+	SPI_IFCR(SPI2)|=SPI_IER_MODFIE;
+
+	//spi_init_master(SPI1,5,0,0,0);
+	spi_disable_crc(SPI2);
+	spi_enable_software_slave_management(SPI2);
+	//spi_set_transfer_size(SPI2, 8);
+	spi_disable_ss_output(SPI2);
+	spi_set_full_duplex_mode(SPI2);
+	spi_set_transfer_size(SPI2, 0x0);
+	spi_send_msb_first(SPI2);
+	//spi_set_bidirectional_transmit_only_mode(SPI2);
+	spi_set_nss_high(SPI2);
+    //	spi_init_master(SPI1,SPI_CFG1_MBR_CLK_DIV_256,0,0,0);
+	spi_set_baudrate_prescaler(SPI2, SPI_CFG1_MBR_CLK_DIV_2);
+	spi_set_data_size(SPI2,SPI_CFG1_DSIZE_8BIT);
+		spi_set_master_mode(SPI2);
+		//			SPI_IFCR(SPI1)|=SPI_IER_MODFIE;
+		SPI_CR2(SPI2) =0;
+		SPI_CFG2(SPI2) |= SPI_CFG2_AFCNTR | SPI_CFG2_SSOE ; 
+	spi_enable(SPI2);
+	SPI_CR1(SPI2) |= SPI_CR1_CSTART;
+//	my_spi_send8(SPI2, 0x55);
+//	my_spi_send8(SPI2, 0xaa);
+//	my_spi_send8(SPI2, 0x01);
+//	my_spi_send8(SPI2, 0x10);
+//	my_spi_send8(SPI2, 0x81);
+//	my_spi_send8(SPI2, 0x99);
+	
+	//	spi_wait_for_transfer_finished(SPI2);
+
 }	
 	
+void spi2_isr(void) {
+printf("spi interrupt fired");
+uint8_t temp = spi_read8(SPI2);
+}
+
 void spi_test(void) {
 uint8_t testdata = 0xFF;
 
@@ -815,6 +948,22 @@ spi_send8(SPI2, testdata);
 	
 }
 
+/*
+void usbuart_send_stdout(const uint8_t *data, uint32_t len)
+{
+	while (len) {
+		uint32_t cnt = CDCACM_PACKET_SIZE;
+		if (cnt > len)
+			cnt = len;
+		nvic_disable_irq(USB_IRQ);
+		cnt = usbd_ep_write_packet(usbdev, CDCACM_UART_ENDPOINT, data, cnt);
+		nvic_enable_irq(USB_IRQ);
+		data += cnt;
+		len -= cnt;
+		usbuart_set_led_state(TX_LED_ACT, true);
+	}
+}
+*/
 void put_status(char *m)
 {
 	uint16_t stmp;
@@ -946,7 +1095,28 @@ int ramtest(void) {
   return 0; // lol
 }
 	
+void qspitest(void);
+
+uint8_t val[8];
 	
+void qspitest(void) {
+  // Test reading values from memory-mapped Flash.
+//  int val = *( ( uint32_t* ) 0x90000000 );
+
+
+  quad_read(0x90000002, 2, val );
+  printf( "QSPI[2]: 0x%08X 0x%08X\r\n", val[0], val[1] );
+  quad_read(0x90000004, 2, val );
+  printf( "QSPI[4]: 0x%08X 0x%08X\r\n", val[0], val[1] );
+  quad_read(0x90000008, 2, val );
+  printf( "QSPI[8]: 0x%08X 0x%08X\r\n", val[0], val[1] );
+  quad_read(0x9000000D, 2, val );
+  printf( "QSPI[13]: 0x%08X 0x%08X\r\n", val[0], val[1] );
+  quad_read(0x90000100, 2, val );
+  printf( "QSPI[+]: 0x%08X 0x%08X\r\n", val[0], val[1] );
+  quad_read(0x90000000, 2, val );
+  printf( "QSPI[0]: 0x%08X 0x%08X\r\n", val[0], val[1] );
+}
 	    
 usbd_device *usbd_dev;
 volatile uint32_t busy_count;
@@ -984,6 +1154,9 @@ int main(void)
 
     sdramsetup();
 //    qspiinit();
+//    quad_setup();
+//    printf("after qspi setup\r\n");
+//    qspitest();
     put_status("after sdram setup :");
 	spiRelInit();
 	put_status("after spiRelInit setuo :");

@@ -143,31 +143,33 @@ SOFTWARE.
 #define ST_PORT			GPIOB
 
 #define ST_RST			GPIO13
-#define ST_DC			GPIO7
+#define ST_DC			GPIO8
 
 // To use Chip Select (CS), uncomment `HAS_CS` above
 #define ST_CS			GPIO0
 
 
-#define ST_DC_CMD			gpio_clear(GPIOG, ST_DC)
-#define ST_DC_DAT			gpio_set(GPIOG, ST_DC)
+#define ST_DC_CMD			gpio_clear(GPIOA, ST_DC)
+#define ST_DC_DAT			gpio_set(GPIOA, ST_DC)
 #define ST_RST_ACTIVE		gpio_clear(GPIOB, ST_RST)
 #define ST_RST_IDLE			gpio_set(GPIOB, ST_RST)
 #ifdef ST_HAS_CS
 	#define ST_CS_ACTIVE		{ \
 	                            gpio_set(GPIOJ, GPIO11); \
-	                            gpio_clear(GPIOA, GPIO8); \
+	                            gpio_clear(GPIOI, GPIO0);  \
 	                            } 
-	#define ST_CS_IDLE			gpio_set(GPIOA, GPIO8)
+	#define ST_CS_IDLE			gpio_set(GPIOI, GPIO0)
 #endif
 
 
+void my_spi_flush(unsigned long spi);
+void my_spi_send8(unsigned long spi,unsigned char d);
 
 
 #define ST_SWAP(a, b)		{uint16_t temp; temp = a; a = b; b = temp;}
 
 #define POOP    do{ \
-            	for (unsigned i = 0; i < 210; i++) \
+            	for (unsigned i = 0; i < 110; i++) \
             	  { \
         		    __asm__("nop"); \
             	  } \
@@ -206,38 +208,78 @@ SOFTWARE.
  * inline function to send 8 bit command to the display
  * User need not call it
  */
+// uint8_t s_TransferBuffer[10];
+/*
 __attribute__((always_inline)) static inline void _st_write_command_8bit(uint8_t cmd)
 {
-	#ifdef ST_RELEASE_WHEN_IDLE
-		ST_CS_ACTIVE;
-	#endif
-	ST_DC_CMD;
-	printf("sizeof cmd = %d\r\n", sizeof(cmd));
-	ST_WRITE_8BIT(cmd);
-	#ifdef ST_RELEASE_WHEN_IDLE
-		ST_CS_IDLE;
-	#endif
 
+		ST_CS_ACTIVE;
+	ST_DC_CMD;
+//	printf("sizeof cmd = %d\r\n", sizeof(cmd));
+//	ST_WRITE_8BIT(cmd);
+uint8_t s_TransferBuffer[10];
+	s_TransferBuffer[0] = cmd;
+	    for (uint32_t i=0; i<1; i++)
+    {
+            while ((SPI_SR(SPI2) & SPI_SR_TXP) != SPI_SR_TXP){};
+            *((volatile uint32_t *)&SPI_TXDR(SPI2)) = *((uint32_t *)&s_TransferBuffer[i]);
+    }
 	
+		ST_CS_IDLE;
+}
+*/
+__attribute__((always_inline)) static inline void _st_write_command_8bit(uint8_t cmd)
+{
+
+//		ST_CS_ACTIVE;
+	ST_DC_CMD;
+	
+//    spi_xfer(SPI2, cmd);
+//    while (!(SPI_SR(SPI2) & SPI_SR_TXC));
+//    uint8_t temp = spi_read8(SPI2);
+//	while (!(SPI_SR(SPI2) & SPI_SR_RXP));
+//	ST_CS_IDLE;
+my_spi_send8(SPI2, cmd);
 }
 
 /*
  * inline function to send 8 bit data to the display
  * User need not call it
  */
+ /*
 __attribute__((always_inline)) static inline void _st_write_data_8bit(uint8_t dat)
 {
-	#ifdef ST_RELEASE_WHEN_IDLE
-		ST_CS_ACTIVE;
-	#endif
-	ST_DC_DAT;
-	printf("sizeof data = %d\r\n", sizeof(dat));
-	ST_WRITE_8BIT(dat);
-	#ifdef ST_RELEASE_WHEN_IDLE
-		ST_CS_IDLE;
-	#endif
+uint8_t s_TransferBuffer[10];
 
+		ST_CS_ACTIVE;
+	ST_DC_DAT;
+//	printf("sizeof cmd = %d\r\n", sizeof(cmd));
+//	ST_WRITE_8BIT(cmd);
+	s_TransferBuffer[0] = dat;
+	    for (uint32_t i=0; i<1; i++)
+    {
+            while ((SPI_SR(SPI2) & SPI_SR_TXP) != SPI_SR_TXP){};
+            *((volatile uint32_t *)&SPI_TXDR(SPI2)) = *((uint32_t *)&s_TransferBuffer[i]);
+    }
+	
+		ST_CS_IDLE;
 }
+*/
+
+__attribute__((always_inline)) static inline void _st_write_data_8bit(uint8_t dat)
+{
+//      uint8_t s_TransferBuffer[10];
+
+//		ST_CS_ACTIVE;
+	ST_DC_DAT;
+//spi_xfer(SPI2, dat);
+//     while (!(SPI_SR(SPI2) & SPI_SR_TXC));
+//    uint8_t temp = spi_read8(SPI2);
+//	while (!(SPI_SR(SPI2) & SPI_SR_RXP));  
+//		ST_CS_IDLE;
+my_spi_send8(SPI2, dat);
+}
+
 
 /*
  * inline function to send 16 bit data to the display
@@ -254,10 +296,7 @@ __attribute__((always_inline)) static inline void _st_write_data_16bit(uint16_t 
 	#ifdef ST_RELEASE_WHEN_IDLE
 		ST_CS_IDLE;
 	#endif
-	uint8_t temp = SPI_SR(SPI2);
-	  if (temp) {
-	    ;
-    }
+
 }
 
 __attribute__((always_inline)) static inline void _st_write_command_16bit(uint16_t dat)
@@ -276,6 +315,8 @@ __attribute__((always_inline)) static inline void _st_write_command_16bit(uint16
 	    ;
     }
 }
+
+
 
 /*
 * function prototypes

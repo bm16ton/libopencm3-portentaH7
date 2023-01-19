@@ -23,6 +23,12 @@ SOFTWARE.
 */
 //#include "timing_stm32.h"
 #include "st7789_stm32_spi.h"
+#include "fonts/font_fixedsys_mono_24.h"
+#include "fonts/pic.h"
+#include "fonts/ext-firm.h"
+#include "fonts/bitmap_typedefs.h"
+
+#include "fonts/font_ubuntu_48.h"
 #define ST_BUFFER_SIZE_BYTES	256
 //TFT width and height default global variables
 uint16_t st_tftwidth = 320;
@@ -45,10 +51,10 @@ void st_set_address_window(uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y2)
 		ST_CS_ACTIVE;
 	#endif
 	ST_DC_DAT;
-	ST_WRITE_8BIT((uint8_t)(x1 >> 8));
-	ST_WRITE_8BIT((uint8_t)x1);
-	ST_WRITE_8BIT((uint8_t)(x2 >> 8));
-	ST_WRITE_8BIT((uint8_t)x2);
+	_st_write_data_8bit((uint8_t)(x1 >> 8));
+	_st_write_data_8bit((uint8_t)x1);
+	_st_write_data_8bit((uint8_t)(x2 >> 8));
+	_st_write_data_8bit((uint8_t)x2);
 
 
 	_st_write_command_8bit(ST7789_RASET);
@@ -56,10 +62,10 @@ void st_set_address_window(uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y2)
 		ST_CS_ACTIVE;
 	#endif
 	ST_DC_DAT;
-	ST_WRITE_8BIT((uint8_t)(y1 >> 8));
-	ST_WRITE_8BIT((uint8_t)y1);
-	ST_WRITE_8BIT((uint8_t)(y2 >> 8));
-	ST_WRITE_8BIT((uint8_t)y2);
+	_st_write_data_8bit((uint8_t)(y1 >> 8));
+	_st_write_data_8bit((uint8_t)y1);
+	_st_write_data_8bit((uint8_t)(y2 >> 8));
+	_st_write_data_8bit((uint8_t)y2);
 
 	_st_write_command_8bit(ST7789_RAMWR);
 }
@@ -314,8 +320,8 @@ void st_draw_bitmap(uint16_t x, uint16_t y, const tImage *bitmap)
 		uint32_t total_pixels = width * height;
 		for (uint16_t pixels = 0; pixels < total_pixels; pixels++)
 		{
-			ST_WRITE_8BIT((uint8_t)(bitmap->data[2*pixels]));
-			ST_WRITE_8BIT((uint8_t)(bitmap->data[2*pixels + 1]));
+			_st_write_data_8bit((uint8_t)(bitmap->data[2*pixels]));
+			_st_write_data_8bit((uint8_t)(bitmap->data[2*pixels + 1]));
 		}
 
 	#endif
@@ -368,7 +374,7 @@ void st_fill_color(uint16_t color, uint32_t len)
 		uint8_t  pass_count;
 
 		// Write first pixel
-		ST_WRITE_8BIT(color_high); ST_WRITE_8BIT(color_low);
+		_st_write_data_8bit(color_high); _st_write_data_8bit(color_low);
 		len--;
 
 		while(blocks--)
@@ -376,15 +382,15 @@ void st_fill_color(uint16_t color, uint32_t len)
 			pass_count = 16;
 			while(pass_count--)
 			{
-				ST_WRITE_8BIT(color_high); ST_WRITE_8BIT(color_low); 	ST_WRITE_8BIT(color_high); ST_WRITE_8BIT(color_low); //2
-				ST_WRITE_8BIT(color_high); ST_WRITE_8BIT(color_low); 	ST_WRITE_8BIT(color_high); ST_WRITE_8BIT(color_low); //4
+				_st_write_data_8bit(color_high); _st_write_data_8bit(color_low); 	_st_write_data_8bit(color_high); _st_write_data_8bit(color_low); //2
+				_st_write_data_8bit(color_high); _st_write_data_8bit(color_low); 	_st_write_data_8bit(color_high); _st_write_data_8bit(color_low); //4
 			}
 		}
 		pass_count = len & 63;
 		while (pass_count--)
 		{
 			// write here the remaining data
-			ST_WRITE_8BIT(color_high); ST_WRITE_8BIT(color_low);
+			_st_write_data_8bit(color_high); _st_write_data_8bit(color_low);
 		}
 		
 	#endif
@@ -430,7 +436,7 @@ void st_fill_color_array(uint8_t *color_arr, uint32_t bytes)
 		uint8_t  pass_count;
 
 		// Write first pixel
-		ST_WRITE_8BIT(*color_arr); ST_WRITE_8BIT(*(++color_arr));
+		_st_write_data_8bit(*color_arr); _st_write_data_8bit(*(++color_arr));
 		--len;
 
 		while(blocks--)
@@ -438,15 +444,15 @@ void st_fill_color_array(uint8_t *color_arr, uint32_t bytes)
 			pass_count = 16;
 			while(pass_count--)
 			{
-				ST_WRITE_8BIT(*(++color_arr)); ST_WRITE_8BIT(*(++color_arr)); 	ST_WRITE_8BIT(*(++color_arr)); ST_WRITE_8BIT(*(++color_arr)); //2
-				ST_WRITE_8BIT(*(++color_arr)); ST_WRITE_8BIT(*(++color_arr)); 	ST_WRITE_8BIT(*(++color_arr)); ST_WRITE_8BIT(*(++color_arr)); //4
+				_st_write_data_8bit(*(++color_arr)); _st_write_data_8bit(*(++color_arr)); 	_st_write_data_8bit(*(++color_arr)); _st_write_data_8bit(*(++color_arr)); //2
+				_st_write_data_8bit(*(++color_arr)); _st_write_data_8bit(*(++color_arr)); 	_st_write_data_8bit(*(++color_arr)); _st_write_data_8bit(*(++color_arr)); //4
 			}
 		}
 		pass_count = len & 63;
 		while (pass_count--)
 		{
 			// write here the remaining data
-			ST_WRITE_8BIT(*(++color_arr)); ST_WRITE_8BIT(*(++color_arr));
+			_st_write_data_8bit(*(++color_arr)); _st_write_data_8bit(*(++color_arr));
 		}
 		
 	#endif
@@ -555,8 +561,8 @@ void _st_plot_line_low(uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y1, uint8
 		ST_DC_DAT;
 		for (uint8_t pixel_cnt = 0; pixel_cnt < pixels_per_point; pixel_cnt++)
 		{
-			ST_WRITE_8BIT(color_high);
-			ST_WRITE_8BIT(color_low);
+			_st_write_data_8bit(color_high);
+			_st_write_data_8bit(color_low);
 		}
 		#ifdef ST_RELEASE_WHEN_IDLE
 			ST_CS_IDLE;
@@ -607,8 +613,8 @@ void _st_plot_line_high(uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y1, uint
 		ST_DC_DAT;
 		for (uint8_t pixel_cnt = 0; pixel_cnt < pixels_per_point; pixel_cnt++)
 		{
-			ST_WRITE_8BIT(color_high);
-			ST_WRITE_8BIT(color_low);
+			_st_write_data_8bit(color_high);
+			_st_write_data_8bit(color_low);
 		}
 		#ifdef ST_RELEASE_WHEN_IDLE
 			ST_CS_IDLE;
@@ -723,8 +729,8 @@ void st_draw_pixel(uint16_t x, uint16_t y, uint16_t color)
 		ST_CS_ACTIVE;
 	#endif
 	ST_DC_DAT;
-	ST_WRITE_8BIT((uint8_t)(color >> 8));
-	ST_WRITE_8BIT((uint8_t)color);
+	_st_write_data_8bit((uint8_t)(color >> 8));
+	_st_write_data_8bit((uint8_t)color);
 	#ifdef ST_RELEASE_WHEN_IDLE
 		ST_CS_IDLE;
 	#endif
@@ -768,14 +774,29 @@ void st_rotate_display(uint8_t rotation)
 //			st_set_address_window( 0, 120,  240,  240);
 			break;
 		case 3:
-			_st_write_data_8bit(ST7789_MADCTL_MX | ST7789_MADCTL_MV | ST7789_MADCTL_RGB);
+			_st_write_data_8bit(ST7789_MADCTL_MV | ST7789_MADCTL_BGR);
 			st_tftheight = 240;
 			st_tftwidth = 320;
 			break;
 	}
 }
 
- 
+void my_spi_flush(unsigned long spi)
+{
+while((SPI_SR(spi) & SPI_SR_RXWNE) || ( (SPI_SR(spi) & (SPI_SR_RXPLVL_MASK<<SPI_SR_RXPLVL_SHIFT)) !=0 ) )
+SPI_RXDR(spi);
+}
+
+void my_spi_send8(unsigned long spi,unsigned char d)
+{
+SPI_CR1(SPI2) |= SPI_CR1_CSTART;
+while(!(SPI_SR(spi) & SPI_SR_TXP));
+SPI_TXDR8(spi)=d;
+while( !( SPI_SR(spi) & SPI_SR_TXC));
+my_spi_flush(spi);
+//spi_wait_for_transfer_finished(spi);
+//SPI_IFCR(spi)=SPI_IFCR_EOTC;
+}
 
 
 /**
@@ -784,9 +805,9 @@ void st_rotate_display(uint8_t rotation)
 void st_init()
 {
 
-	#ifdef ST_HAS_CS
+	
 		ST_CS_ACTIVE;
-	#endif
+
 
 	// Hardwae reset is not mandatory if software rest is done
 	#ifdef ST_HAS_RST
@@ -798,6 +819,7 @@ void st_init()
 
         _st_write_command_8bit(0x01);
 		_st_fixed_delay();
+
 		_st_fixed_delay();
 	_st_write_command_8bit(0x11);
 /*
@@ -831,27 +853,35 @@ void st_init()
 //_st_write_command_8bit(0x01);
 _st_fixed_delay();
  _st_write_command_8bit(0xEF);
+ _st_fixed_delay();
+
   _st_write_data_8bit(0x03);
   _st_write_data_8bit(0x80);
   _st_write_data_8bit(0x02);
+  _st_fixed_delay();
 
 
   _st_write_command_8bit(0xCF);
   _st_write_data_8bit(0x00);
   _st_write_data_8bit(0XC1);
   _st_write_data_8bit(0X30);
+  _st_fixed_delay();
 
   
   _st_write_command_8bit(0xED);
   _st_write_data_8bit(0x64);
+  _st_fixed_delay();
   _st_write_data_8bit(0x03);
   _st_write_data_8bit(0X12);
+  _st_fixed_delay();
   _st_write_data_8bit(0X81);
+  _st_fixed_delay();
 
   _st_write_command_8bit(0xE8);
   _st_write_data_8bit(0x85);
   _st_write_data_8bit(0x00);
   _st_write_data_8bit(0x78);
+  _st_fixed_delay();
 
   _st_write_command_8bit(0xCB);
   _st_write_data_8bit(0x39);
@@ -869,6 +899,7 @@ _st_fixed_delay();
 
   _st_write_command_8bit(0xC0);    //Power control
   _st_write_data_8bit(0x23);   //VRH[5:0]
+  _st_fixed_delay();
 
   _st_write_command_8bit(0xC1);    //Power control
   _st_write_data_8bit(0x10);   //SAP[2:0];BT[3:0]
@@ -879,6 +910,7 @@ _st_fixed_delay();
 
   _st_write_command_8bit(0xC7);    //VCM control2
   _st_write_data_8bit(0x86);  //--
+  _st_fixed_delay();
 
   _st_write_command_8bit(0x36);    // Memory Access Control
 //#ifdef M5STACK
@@ -890,6 +922,7 @@ _st_fixed_delay();
 
   _st_write_command_8bit(0x3A);
   _st_write_data_8bit(0x55);
+  _st_fixed_delay();
 
   _st_write_command_8bit(0xB1);
   _st_write_data_8bit(0x00);
@@ -905,6 +938,7 @@ _st_fixed_delay();
 
   _st_write_command_8bit(0x26);    //Gamma curve selected
   _st_write_data_8bit(0x01);
+  _st_fixed_delay();
 
   _st_write_command_8bit(0xE0);    //Set Gamma
   _st_write_data_8bit(0x0F);
@@ -939,19 +973,23 @@ _st_fixed_delay();
   _st_write_data_8bit(0x31);
   _st_write_data_8bit(0x36);
   _st_write_data_8bit(0x0F);
-
+  _st_fixed_delay();
   _st_write_command_8bit(0x11);    //Exit Sleep
- 
+  _st_fixed_delay();
  ST_CS_IDLE;
   _st_fixed_delay();
  _st_fixed_delay();
   ST_CS_ACTIVE;
   _st_write_command_8bit(0x29);    //Display on
-
   _st_fixed_delay();
-  st_set_address_window(0, 0, st_tftheight-1, st_tftwidth-1);
-  st_fill_screen(ST_COLOR_PINK);
+  st_rotate_display(3);
+  _st_fixed_delay();
 //  st_set_address_window(0, 0, st_tftheight-1, st_tftwidth-1);
+  st_fill_screen(ST_COLOR_PINK);
+st_draw_bitmap(100, 100, &bm16ton);
+  _st_fixed_delay();
+//   st_draw_string(10, 20, "16TON'S OF SLCAN", ST_COLOR_BLACK, &font_ubuntu_48);
+
 
 }
 
