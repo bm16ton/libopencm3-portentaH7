@@ -128,7 +128,7 @@ printf( "Configure QSPI...after reg wait \r\n" );
   QUADSPI_DR    =  ( 0x02 );
   printf( "Configure QSPI...after send \r\n" );
   // Wait for the transaction to finish.
-  while ( QUADSPI_SR & QUADSPI_SR_BUSY ) {};
+//  while ( QUADSPI_SR & QUADSPI_SR_BUSY ) {};
   printf( "Configure QSPI...after QUADSPI_SR_BUSY \r\n" );
   // Disable the peripheral.
   QUADSPI_CR   &= ~( QUADSPI_CR_EN );
@@ -169,7 +169,7 @@ printf( "Configure QSPI...after 3rdnd reg wait \r\n" );
   // Add a dummy cycle; if memory-mapped access is attempted
   // immediately after enabling the peripheral, it seems to fail.
   // I'm not sure why, but adding one nop instruction seems to fix it.
-  __asm( "NOP" );
+
   delay_ms( 1 );
 
   // Test reading values from memory-mapped Flash.
