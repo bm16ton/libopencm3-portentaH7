@@ -23,8 +23,8 @@ uint32_t samples[SAMPLES_PER_MESSAGE] __attribute__ ((aligned(2)));
 //static void send_samples(uint8_t ep);
 static void adc_once(void);
 
-uint8_t ADC_CHANNEL2 = 12;
-const unsigned char CHAN4[] = { 12 };
+uint8_t ADC_CHANNEL2 = 18;
+const unsigned char CHAN4[] = { 18 };
 
 static enum usbd_request_return_codes adc_control_request(usbd_device *dev,
 	struct usb_setup_data *req,
@@ -70,7 +70,7 @@ void adc_start(void)
 
 
 //	gpio_mode_setup(GPIOA, GPIO_MODE_ANALOG, GPIO_PUPD_NONE, GPIO1);
-	gpio_mode_setup(GPIOC, GPIO_MODE_ANALOG, GPIO_PUPD_NONE, GPIO2);
+	gpio_mode_setup(GPIOA, GPIO_MODE_ANALOG, GPIO_PUPD_NONE, GPIO4);
 //	rcc_periph_clock_enable(RCC_ADC1);
 	rcc_periph_clock_enable(RCC_ADC12);
 //	adc_set_clk_prescale(ADC_CCR_PRESC_2);
