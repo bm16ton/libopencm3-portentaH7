@@ -43,7 +43,8 @@
 #include "cdc.h"
 #include "qspi2.h"
 #include "test_i2c.h"
-
+#include "usb.h"
+#include "adctest.h"
 /* Define this to nonzero, to have only one cdcacm interaface (usb serial port) active. */
 
 #define USART_CONSOLE USART1
@@ -190,6 +191,38 @@ static const struct usb_interface_descriptor data_iface_cdcacm_0[] = {{
 	.endpoint = data_endp_cdcacm_0,
 } };
 
+static const struct usb_endpoint_descriptor endp_bulk2[] = {
+	{
+		.bLength = USB_DT_ENDPOINT_SIZE,
+		.bDescriptorType = USB_DT_ENDPOINT,
+		.bEndpointAddress = 0x03,
+		.bmAttributes = USB_ENDPOINT_ATTR_BULK,
+		.wMaxPacketSize = BULK_EP_MAXPACKET,
+		.bInterval = 1,
+	},
+	{
+		.bLength = USB_DT_ENDPOINT_SIZE,
+		.bDescriptorType = USB_DT_ENDPOINT,
+		.bEndpointAddress = 0x83,
+		.bmAttributes = USB_ENDPOINT_ATTR_BULK,
+		.wMaxPacketSize = BULK_EP_MAXPACKET,
+		.bInterval = 1,
+	},
+};
+
+static const struct usb_interface_descriptor iface_sourcesink2[] = {
+	{
+		.bLength = USB_DT_INTERFACE_SIZE,
+		.bDescriptorType = USB_DT_INTERFACE,
+		.bInterfaceNumber = 2,
+		.bAlternateSetting = 0,
+		.bNumEndpoints = 2,
+		.bInterfaceClass = USB_CLASS_VENDOR,
+		.iInterface = 3,
+		.endpoint = endp_bulk2,
+	}
+};
+
 static const struct usb_interface ifaces[] = {
 	{
 		.num_altsetting = 1,
@@ -200,13 +233,17 @@ static const struct usb_interface ifaces[] = {
 		.num_altsetting = 1,
 		.altsetting = data_iface_cdcacm_0,
 	},
+	{
+		.num_altsetting = 1,
+	    .altsetting = iface_sourcesink2,
+	}, 
 };
 
 static const struct usb_config_descriptor config = {
 	.bLength = USB_DT_CONFIGURATION_SIZE,
 	.bDescriptorType = USB_DT_CONFIGURATION,
 	.wTotalLength = 0,
-	.bNumInterfaces = 2,
+	.bNumInterfaces = 3,
 	.bConfigurationValue = 1,
 	.iConfiguration = 0,
 	.bmAttributes = 0x80,
@@ -371,8 +408,6 @@ int _write(int file, char *ptr, int len)
 }
 
 
-
-//static void poop(usbd_device *usbd_dev);
 bool rtc_init_flag_is_ready(void)
 {
 	return (RTC_ISR & RTC_ISR_INITF);
@@ -380,7 +415,7 @@ bool rtc_init_flag_is_ready(void)
 
 void usbuart_set_line_coding(struct usb_cdc_line_coding *coding);
 
-//static uint8_t xbuf[7];
+
 void usbuart_set_line_coding(struct usb_cdc_line_coding *coding)
 {
 printf("baud = %ld\r\n", coding->dwDTERate);
@@ -402,7 +437,7 @@ __asm( "NOP" );
 RTC_ISR |= RTC_ISR_INIT;
 __asm( "NOP" );
 while (!rtc_init_flag_is_ready());
-printf("done waiting for rtc init, now setting magicboot");
+printf("done waiting for rtc init, now setting magicboot");  //todo used as delay cuz its almost perfect
 __asm( "NOP" );
 __asm( "NOP" );
 __asm( "NOP" );
@@ -483,18 +518,7 @@ static enum usbd_request_return_codes cdcacm_control_request(usbd_device *usbd_d
 	}
 	return USBD_REQ_NOTSUPP;
 }
-/*
-static void poop(usbd_device *usbd_dev)
-{
 
-int poo;
-
-	poo = usbd_ep_write_packet(usbd_dev, 0x81, xbuf, sizeof xbuf);
-	if (poo) {
-	;
-	}
-}
-*/
 
 static void cdcacm_data_rx_cb(usbd_device *usbd_dev, uint8_t ep)
 {
@@ -571,57 +595,7 @@ static void gpio_setup(void)
     gpio_set(GPIOK, GPIO6);
 	gpio_clear(GPIOK, GPIO7);
 
-    //ulpi
-
-	gpio_mode_setup(GPIOA, GPIO_MODE_OUTPUT, GPIO_PUPD_PULLUP, GPIO3);
-	gpio_set_output_options(GPIOA, GPIO_OTYPE_PP, GPIO_OSPEED_100MHZ, GPIO3);
-
-	gpio_mode_setup(GPIOA, GPIO_MODE_OUTPUT, GPIO_PUPD_PULLUP, GPIO5);
-	gpio_set_output_options(GPIOA, GPIO_OTYPE_PP, GPIO_OSPEED_100MHZ, GPIO5);
-
-	gpio_mode_setup(GPIOB, GPIO_MODE_OUTPUT, GPIO_PUPD_PULLUP, GPIO0);
-	gpio_set_output_options(GPIOB, GPIO_OTYPE_PP, GPIO_OSPEED_100MHZ, GPIO0);
-
-	gpio_mode_setup(GPIOB, GPIO_MODE_OUTPUT, GPIO_PUPD_PULLUP, GPIO1);
-	gpio_set_output_options(GPIOB, GPIO_OTYPE_PP, GPIO_OSPEED_100MHZ, GPIO1);
-
-	gpio_mode_setup(GPIOB, GPIO_MODE_OUTPUT, GPIO_PUPD_PULLUP, GPIO5);
-	gpio_set_output_options(GPIOB, GPIO_OTYPE_PP, GPIO_OSPEED_100MHZ, GPIO5);
-
-	gpio_mode_setup(GPIOB, GPIO_MODE_OUTPUT, GPIO_PUPD_PULLUP, GPIO10);
-	gpio_set_output_options(GPIOB, GPIO_OTYPE_PP, GPIO_OSPEED_100MHZ, GPIO10);
-
-	gpio_mode_setup(GPIOB, GPIO_MODE_OUTPUT, GPIO_PUPD_PULLUP, GPIO11);
-	gpio_set_output_options(GPIOB, GPIO_OTYPE_PP, GPIO_OSPEED_100MHZ, GPIO11);
-
-	gpio_mode_setup(GPIOB, GPIO_MODE_OUTPUT, GPIO_PUPD_PULLUP, GPIO12);
-	gpio_set_output_options(GPIOB, GPIO_OTYPE_PP, GPIO_OSPEED_100MHZ, GPIO12);
-
-	gpio_mode_setup(GPIOB, GPIO_MODE_OUTPUT, GPIO_PUPD_PULLUP, GPIO13);
-	gpio_set_output_options(GPIOB, GPIO_OTYPE_PP, GPIO_OSPEED_100MHZ, GPIO13);
-
-	gpio_mode_setup(GPIOC, GPIO_MODE_OUTPUT, GPIO_PUPD_PULLUP, GPIO0);
-	gpio_set_output_options(GPIOC, GPIO_OTYPE_PP, GPIO_OSPEED_100MHZ, GPIO0);
-
-	gpio_mode_setup(GPIOH, GPIO_MODE_OUTPUT, GPIO_PUPD_PULLUP, GPIO4);
-	gpio_set_output_options(GPIOH, GPIO_OTYPE_PP, GPIO_OSPEED_100MHZ, GPIO4);
-
-	gpio_mode_setup(GPIOI, GPIO_MODE_OUTPUT, GPIO_PUPD_PULLUP, GPIO11);
-	gpio_set_output_options(GPIOI, GPIO_OTYPE_PP, GPIO_OSPEED_100MHZ, GPIO11);
-
-	gpio_set_af(GPIOA, GPIO_AF10, GPIO3);
-	gpio_set_af(GPIOA, GPIO_AF10, GPIO5);
-	gpio_set_af(GPIOB, GPIO_AF10, GPIO0);
-	gpio_set_af(GPIOB, GPIO_AF10, GPIO1);
-	gpio_set_af(GPIOB, GPIO_AF10, GPIO5);
-	gpio_set_af(GPIOB, GPIO_AF10, GPIO10);
-	gpio_set_af(GPIOB, GPIO_AF10, GPIO11);
-	gpio_set_af(GPIOB, GPIO_AF10, GPIO12);
-	gpio_set_af(GPIOB, GPIO_AF10, GPIO13);
-	gpio_set_af(GPIOC, GPIO_AF10, GPIO0);
-	gpio_set_af(GPIOH, GPIO_AF10, GPIO4);
-	gpio_set_af(GPIOI, GPIO_AF10, GPIO11);
-
+ 
 	ulpi_pins(GPIOA, GPIO3 | GPIO5);
 	ulpi_pins(GPIOB, GPIO0 | GPIO1 | GPIO5  | GPIO10 | GPIO11 | GPIO12 | GPIO13);
 	ulpi_pins(GPIOC, GPIO0);
@@ -747,163 +721,39 @@ void spiRelInit(){
         |  GPIO1
     );
     
-    gpio_mode_setup(GPIOC, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, GPIO6);
-    gpio_set_output_options(GPIOC, GPIO_OTYPE_PP,
-				GPIO_OSPEED_100MHZ, GPIO6);
-	gpio_clear(GPIOC, GPIO6);
-    gpio_mode_setup(GPIOG, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, GPIO7);
-    gpio_set_output_options(GPIOG, GPIO_OTYPE_PP,
-				GPIO_OSPEED_100MHZ, GPIO7);
+
+
     gpio_mode_setup(GPIOA, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, GPIO8);
     gpio_set_output_options(GPIOA, GPIO_OTYPE_PP,
 				GPIO_OSPEED_100MHZ, GPIO8);
     gpio_clear(GPIOA, GPIO8);
-    gpio_mode_setup(GPIOJ, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, GPIO11);
-    gpio_set(GPIOJ, GPIO11);
+
 }
 
 void spiInit(){
-/*    spi_disable(SPI2);
-	SPI_CFG2(SPI2) &= ~SPI_CR1_SSI;
-	SPI_CFG2(SPI2) &= ~SPI_CFG2_SSM;
-	SPI_CFG2(SPI2) |= SPI_CFG2_SSOE;
-	spi_init_master(SPI2, SPI_CFG1_MBR_CLK_DIV_4, 0,
-			0, 0);
-	SPI_CFG2(SPI2) &= ~SPI_CR1_SSI;
-	SPI_CFG2(SPI2) &= ~SPI_CFG2_SSM;
-	SPI_CFG2(SPI2) |= SPI_CFG2_SSOE;
-	// CR1
-	// crc calculation zero patterns
-//	SPI_CR1(SPI1) &= ~SPI_CR1_TCRCINI;
-    spi_disable_crc(SPI2);
-	// polynomial not used
-//	SPI_CR1(SPI1) &= ~SPI_CR1_CRC33_17;
-	spi_set_full_duplex_mode(SPI2);
-	spi_set_clock_polarity_0(SPI2);
-	spi_set_clock_phase_1(SPI2);
-//	spi_set_bidirectional_transmit_only_mode(SPI1);
-	// CFG1
-	// master clock /32
-	//SPI_CFG1(SPI1) |= SPI_CFG1_MBR_CLK_DIV_8;
-	// CRC computation disable
-//	SPI_CFG1(SPI1) &= ~SPI_CFG1_CRCEN;
-	// CRCSIZE = 0
-//	SPI_CFG1(SPI1) &= ~SPI_CFG1_CRCSIZE_MASK;
-	// tx dma disable
-//	SPI_CFG1(SPI1) &= ~SPI_CFG1_TXDMAEN;
-	// rx dma disable
-//	SPI_CFG1(SPI1) &= ~SPI_CFG1_RXDMAEN;
-	// fifo threshold level = 1-data
-//	spi_fifo_reception_threshold_8bit(SPI1);
-//	SPI_CFG1(SPI1) &= ~SPI_CFG1_FTHLV_MASK;
-	// Dsize = 8bits
-//	SPI_CFG1(SPI1) &= ~SPI_CFG1_DSIZE_MASK;
-//	SPI_CFG1(SPI1) |= 0x01UL | 0x02UL | 0x04UL;
- //   spi_enable_software_slave_management(SPI1);
-    spi_set_data_size(SPI2, SPI_CFG1_DSIZE_8BIT);
-//	spi_set_transfer_size(SPI2, 0xFFFF);
- //   spi_set_transfer_size(SPI1, 1);
-//	spi_set_standard_mode(SPI1, 0);
-	SPI_CFG2(SPI2) &= ~SPI_CR1_SSI;
-	SPI_CFG2(SPI2) &= ~SPI_CFG2_SSM;
-	SPI_CFG2(SPI2) |= SPI_CFG2_SSOE;
-	spi_send_msb_first(SPI2);
-	spi_set_baudrate_prescaler(SPI2, SPI_CFG1_MBR_CLK_DIV_4);
-	// CFG2
-	// SS SW-management of SS, internal state by SSI bit
-//	SPI_CFG2(SPI1) |= SPI_CFG2_SSM;
-//    spi_enable_software_slave_management(SPI1);
-//    spi_set_nss_high(SPI1);
-	// CR1
-	// SS bit high
-	// SPI_CFG2(SPI1) |= SPI_CR1_SSI;
-//	spi_enable_ss_output(SPI1);
-	
-	
-	// SPI master mode
-	SPI_CFG2(SPI2) |= SPI_CFG2_MASTER;
-//	spi_disable(SPI2); 
-	SPI_I2SCFGR(SPI2) &= ~SPI_I2SCFGR_I2SMOD;
-//	spi_set_data_size(SPI2, SPI_CFG1_DSIZE_8BIT); 
-//	spi_set_transfer_size(SPI2, 1); 
-	spi_fifo_reception_threshold_8bit(SPI2); 
-	SPI_CR2(SPI2) = (SPI_CR2(SPI2) & ~(SPI_CR2_TSIZE_MASK << SPI_CR2_TSIZE_SHIFT)) | (8 << SPI_CR2_TSIZE_SHIFT); 
-//	spi_enable(SPI1);
-	// full duplex
-//	SPI_CFG2(SPI1) |= SPI_CFG2_COMM_FULL_DUPLEX;
-//	spi_enable(SPI2);
-*/
-
-
-
-
-/*
-    SPI_CR1(SPI2) = 0;
-
-    SPI_CFG1(SPI2) = (0u << SPI_CFG1_MBR_SHIFT) |
-                 (7u << SPI_CFG1_CRCSIZE_SHIFT) |
-                 //SPI_CFG1_TXDMAEN | // SPI_CFG1_RXDMAEN |
-                 (7u << SPI_CFG1_FTHLV_SHIFT) |
-                 (7u << SPI_CFG1_DSIZE_SHIFT)
-                 ;
-
-    SPI_CFG1(SPI2) |= SPI_CFG1_MBR_CLK_DIV_2;
-    spi_disable_crc(SPI2);
-//    spi_set_transfer_size(SPI2, 0xFFFF); 
-    spi_set_data_size(SPI2, SPI_CFG1_DSIZE_8BIT);
-    SPI_CFG2(SPI2) = SPI_CFG2_SSOE |
-                 SPI_CFG2_MASTER 
-                 ;      
-      
- //   spi_enable_ss_output(SPI2);
-
-//     spi_fifo_reception_threshold_16bit(SPI2);
-    spi_set_clock_phase_0(SPI2); 
-    spi_set_clock_polarity_0(SPI2);           
-    spi_send_msb_first(SPI2);
-    spi_disable_tx_buffer_empty_interrupt(SPI2);
-    spi_enable_rx_buffer_not_empty_interrupt(SPI2);
-    spi_disable_error_interrupt(SPI2);
-    spi_fifo_reception_threshold_8bit(SPI2);
-//	SPI_CR2(SPI2) = (SPI_CR2(SPI2) & ~(SPI_CR2_TSIZE_MASK << SPI_CR2_TSIZE_SHIFT))
-//		| (0xFFFF << SPI_CR2_TSIZE_SHIFT);
-//    SPI_CR2(SPI2) |= 1;
-    SPI_CR1(SPI2) |= SPI_CR1_SPE;
-    SPI_CR1(SPI2) |= SPI_CR1_CSTART;
-*/
-
-
 
 spi_reset(SPI2);
 	SPI_IFCR(SPI2)|=SPI_IER_MODFIE;
 
-	//spi_init_master(SPI1,5,0,0,0);
+
 	spi_disable_crc(SPI2);
 	spi_enable_software_slave_management(SPI2);
-	//spi_set_transfer_size(SPI2, 8);
+
 	spi_disable_ss_output(SPI2);
 	spi_set_full_duplex_mode(SPI2);
 	spi_set_transfer_size(SPI2, 0x0);
 	spi_send_msb_first(SPI2);
-	//spi_set_bidirectional_transmit_only_mode(SPI2);
+
 	spi_set_nss_high(SPI2);
-    //	spi_init_master(SPI1,SPI_CFG1_MBR_CLK_DIV_256,0,0,0);
+
 	spi_set_baudrate_prescaler(SPI2, SPI_CFG1_MBR_CLK_DIV_2);
 	spi_set_data_size(SPI2,SPI_CFG1_DSIZE_8BIT);
 		spi_set_master_mode(SPI2);
-		//			SPI_IFCR(SPI1)|=SPI_IER_MODFIE;
+
 		SPI_CR2(SPI2) =0;
 		SPI_CFG2(SPI2) |= SPI_CFG2_AFCNTR | SPI_CFG2_SSOE ; 
 	spi_enable(SPI2);
 	SPI_CR1(SPI2) |= SPI_CR1_CSTART;
-//	my_spi_send8(SPI2, 0x55);
-//	my_spi_send8(SPI2, 0xaa);
-//	my_spi_send8(SPI2, 0x01);
-//	my_spi_send8(SPI2, 0x10);
-//	my_spi_send8(SPI2, 0x81);
-//	my_spi_send8(SPI2, 0x99);
-	
-	//	spi_wait_for_transfer_finished(SPI2);
 
 }	
 	
@@ -912,41 +762,7 @@ printf("spi interrupt fired");
 uint8_t temp = spi_read8(SPI2);
 }
 
-void spi_test(void) {
-uint8_t testdata = 0xFF;
 
-// This value will point limit to HW's counter
-//SPI_CR2(SPI1) |= (SPI_CR2_TSIZE_MASK & sizeof(testdata));
-
-// SPI enable
-//SPI_CR1(SPI1) |= SPI_CR1_SPE;
-
-/*
-
-			If global SPI interrupt needed
-			- Enable it here, after SPI enable (errata)
-			  and before CSTART
-
-*/
-
-// start transmission
-//SPI_CR1(SPI1) |= SPI_CR1_CSTART;
-spi_send8(SPI2, testdata);
-// if TxFIFO has enough free location to host 1 data packet
-// --> put data to TXDR
-//if(((SPI_SR(SPI1)) & SPI_SR_TXP) == SPI_SR_TXP){
-//	*((volatile uint8_t*)&SPI_TXDR(SPI1)) = testdata;
-	
-//}
-
-// wait end of the transmission
-//while(((SPI_SR(SPI1)) & SPI_SR_EOT) != SPI_SR_EOT){};
-	
-// SPI disable (errata)
-//SPI_CR1(SPI1) |= SPI_CR1_SPE;
-
-	
-}
 
 /*
 void usbuart_send_stdout(const uint8_t *data, uint32_t len)
@@ -1040,16 +856,17 @@ int sdramsetup( void ) {
 	FMC_SDTR1 |= (tr_tmp & FMC_SDTR_DNC_MASK);
 	FMC_SDTR2 = tr_tmp;
                              
-                                 FMC_SDCMR     =  ( ( 1 << FMC_SDCMR_MODE_MASK ) |
-                                                        FMC_SDCMR_CTB1 );
-	for (unsigned i = 0; i < 20; i++)
+  FMC_SDCMR     =  ( ( 1 << FMC_SDCMR_MODE_MASK ) |
+                                FMC_SDCMR_CTB1 );
+                              
+  for (unsigned i = 0; i < 20; i++)
 	  {
 		__asm__("nop");
 	  }
 	  
-	    while( FMC_SDSR & 0x00000020 ) {};
+  while( FMC_SDSR & 0x00000020 ) {};
 	    
-	      FMC_SDCMR     =  ( ( 2 << FMC_SDCMR_MODE_MASK ) |
+  FMC_SDCMR     =  ( ( 2 << FMC_SDCMR_MODE_MASK ) |
                                 FMC_SDCMR_CTB1 );
 
   // Wait for the undocumented 'busy' bit to clear.
@@ -1075,7 +892,7 @@ int sdramsetup( void ) {
   // Make sure writes are enabled.
   FMC_SDCR1 &= ~( FMC_SDCR_WP_ENABLE );
 
-  printf( "Done.\r\n" );
+  printf( "Done configuring FMC.\r\n" );
   return 0;
 }	
 	
@@ -1151,21 +968,24 @@ int main(void)
     gpio_set(GPIOK, GPIO6);
 	gpio_clear(GPIOK, GPIO7);
     usart_setup();
-
-    sdramsetup();
+    adc_start();
+    
 //    qspiinit();
-//    quad_setup();
-//    printf("after qspi setup\r\n");
-//    qspitest();
+/*    quad_setup();
+    printf("after qspi setup\r\n");
+    quad_map();
+    printf("after qspi map\r\n");
+    qspitest();
+    printf("after qspi test\r\n");
+*/
+    sdramsetup();
     put_status("after sdram setup :");
 	spiRelInit();
 	put_status("after spiRelInit setuo :");
 	// SPI register initialization
 	spiInit();
 	put_status("after spiInit setuo :");
-	
-	printf("spi2 clock freq  %ld \r\n", rcc_get_spi_clk_freq(SPI2));
-    printf("qspi clock freq  %ld \r\n", rcc_get_qspi_clk_freq(RCC_QSPI));
+
 	st_init();
 	put_status("after stInit :");
 	    printf("b4 i2c setup\r\n");
@@ -1181,7 +1001,8 @@ int main(void)
 
 
 	usbd_register_set_config_callback(usbd_dev, cdcacm_set_config);
-
+    usbd_register_set_config_callback(usbd_dev, usbadc_set_config);
+    
 	nvic_enable_irq(NVIC_OTG_HS_IRQ);
     gpio_clear(GPIOK, GPIO5);
     gpio_set(GPIOK, GPIO6);
