@@ -789,7 +789,7 @@ SPI_RXDR(spi);
 
 void my_spi_send8(unsigned long spi,unsigned char d)
 {
-SPI_CR1(SPI2) |= SPI_CR1_CSTART;
+SPI_CR1(spi) |= SPI_CR1_CSTART;
 while(!(SPI_SR(spi) & SPI_SR_TXP));
 SPI_TXDR8(spi)=d;
 while( !( SPI_SR(spi) & SPI_SR_TXC));
@@ -985,9 +985,12 @@ _st_fixed_delay();
   st_rotate_display(3);
   _st_fixed_delay();
 //  st_set_address_window(0, 0, st_tftheight-1, st_tftwidth-1);
-  st_fill_screen(ST_COLOR_PINK);
-st_draw_bitmap(100, 100, &bm16ton);
+  st_fill_screen(ST_COLOR_RED);
+st_draw_bitmap(1, 110, &bm16ton);
   _st_fixed_delay();
+  st_draw_line(10, 20, 25, 70, 4, ST_COLOR_YELLOW);
+  st_draw_line(25, 70, 35, 80, 4, ST_COLOR_YELLOW);
+  st_draw_line(35, 80, 30, 20, 4, ST_COLOR_YELLOW);
 //   st_draw_string(10, 20, "16TON'S OF SLCAN", ST_COLOR_BLACK, &font_ubuntu_48);
 
 

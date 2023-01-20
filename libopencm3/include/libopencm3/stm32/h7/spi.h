@@ -316,7 +316,8 @@ void spi_set_data_size(uint32_t spi, uint16_t data_s);
 void spi_fifo_reception_threshold_8bit(uint32_t spi);
 void spi_fifo_reception_threshold_16bit(uint32_t spi);
 void spi_i2s_mode_spi_mode(uint32_t spi);
-void spi_send8(uint32_t spi, uint8_t data);
+void spi_flush(unsigned long spi);
+void spi_send8(unsigned long spi,unsigned char d);
 uint8_t spi_read8(uint32_t spi);
 
 

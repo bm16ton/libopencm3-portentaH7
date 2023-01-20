@@ -754,13 +754,22 @@ int spi_init_master(uint32_t spi, uint32_t br, bool cpol, bool cpha,
 	return 0; /* TODO */
 }
 
-void spi_send8(uint32_t spi, uint8_t data)
+void spi_flush(unsigned long spi)
 {
-	/* Wait for transfer finished. */
-	while (!(SPI_SR(spi) & SPI_SR_TXP));
-
-	SPI_TXDR8(spi) = data;
+while((SPI_SR(spi) & SPI_SR_RXWNE) || ( (SPI_SR(spi) & (SPI_SR_RXPLVL_MASK<<SPI_SR_RXPLVL_SHIFT)) !=0 ) )
+SPI_RXDR(spi);
 }
+
+void spi_send8(unsigned long spi,unsigned char d)
+{
+SPI_CR1(spi) |= SPI_CR1_CSTART;
+while(!(SPI_SR(spi) & SPI_SR_TXP));
+SPI_TXDR8(spi)=d;
+while( !( SPI_SR(spi) & SPI_SR_TXC));
+spi_flush(spi);
+
+}
+
 
 uint8_t spi_read8(uint32_t spi)
 {
