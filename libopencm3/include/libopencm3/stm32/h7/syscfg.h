@@ -83,7 +83,9 @@
 /**@}*/
 void setcm4bootadd0(uint16_t bootadd);
 void setcm4bootadd1(uint16_t bootadd);
-
+uint16_t getcm4bootadd0(void);
+void forcem4boot(void);
+void bootboth(void);
 /**@}*/
 
 #endif

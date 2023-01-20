@@ -38,6 +38,7 @@ LGPL License Terms @ref lgpl_license
 #define RCC_ICSCR                 MMIO32(RCC_BASE + 0x004)  /* Y-devices only */
 #define RCC_HSICFGR               MMIO32(RCC_BASE + 0x004)  /* V-devices only */
 #define RCC_CRRCR                 MMIO32(RCC_BASE + 0x008)
+#define RCC_GCR                   MMIO32(RCC_BASE + 0x0A0)
 #define RCC_CSICFGR               MMIO32(RCC_BASE + 0x00C)  /* V-devices only */
 #define RCC_CFGR                  MMIO32(RCC_BASE + 0x010)
 #define RCC_D1CFGR                MMIO32(RCC_BASE + 0x018)

@@ -45,6 +45,8 @@
 #include "test_i2c.h"
 #include "usb.h"
 #include "adctest.h"
+
+#include <libopencm3/stm32/syscfg.h>
 /* Define this to nonzero, to have only one cdcacm interaface (usb serial port) active. */
 
 #define USART_CONSOLE USART1
@@ -962,12 +964,15 @@ int main(void)
 
 	/* Enable clocks for USART1. */
 	rcc_periph_clock_enable(RCC_USART1);
-
+    setcm4bootadd0(0x08100000 >> 16);
+//    bootboth();
+    forcem4boot();
     gpio_setup();
     gpio_set(GPIOK, GPIO5);
     gpio_set(GPIOK, GPIO6);
 	gpio_clear(GPIOK, GPIO7);
     usart_setup();
+    printf("m4boot0addr = 0x%04x\r\n", getcm4bootadd0());
     adc_start();
     
 //    qspiinit();
@@ -1013,11 +1018,12 @@ int main(void)
 	printf("fmc clock freq  %ld \r\n", rcc_get_fmc_clk_freq(RCC_FMC));
 	printf("i2c3 clock = %ld \r\n", rcc_get_i2c_clk_freq(I2C3));
 	printf("usart1 clock = %ld \r\n", rcc_get_usart_clk_freq(USART1));
-	while (1) {
-    gpio_clear(GPIOK, GPIO5);
+	gpio_clear(GPIOK, GPIO5);
     gpio_set(GPIOK, GPIO6);
 	gpio_set(GPIOK, GPIO7);
-	
+	while (1) {
+
+	;
 	
 
 	}
