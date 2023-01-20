@@ -559,7 +559,7 @@ stm32h7xxxe stm32h7 ROM=512K
 stm32h7xxxg stm32h7 ROM=1M
 stm32h74xxg stm32h7 ROM=512K ROM2=512K
 stm32h7xxxi stm32h7 ROM=1M RAM=256K
-stm32h747 stm32h7 ROM=1M RAM=512K
+stm32h747 stm32h7 ROM=2M RAM=512K
 ################################################################################
 # the SAM3 family groups
 sam3xnfc sam3x NFCRAM=4K NFCRAM_OFF=0x20100000
