@@ -53,14 +53,36 @@
 #define SYSCFG_EXTICR_FIELDSIZE		4
 /**@}*/
 
-
+/** @defgroup syscfg_ur UR SYSCFG configuration register
+ * @ingroup syscfg_registers
+ * @{*/
+#define SYSCFG_UR1_BCM4_SHIFT                    0
+#define SYSCFG_UR1_BCM4_MASK                    0x1
+#define SYSCFG_UR1_BCM7_SHIFT                   16
+#define SYSCFG_UR1_BCM7_MASK                    0x1
+#define SYSCFG_UR2_BORH_SHIFT                   0
+#define SYSCFG_UR2_BORH_MASK                    0x3
+#define SYSCFG_UR2_BORH_0                       0x1
+#define SYSCFG_UR2_BORH_1                       0x2
+#define SYSCFG_UR2_BCM7_ADD0_SHIFT              16
+#define SYSCFG_UR2_BCM7_ADD0_MASK               0xFFFF
+#define SYSCFG_UR3_BCM7_ADD1_SHIFT              0
+#define SYSCFG_UR3_BCM7_ADD1_MASK               0xFFFF
+#define SYSCFG_UR3_BCM4_ADD0_SHIFT              16
+#define SYSCFG_UR3_BCM4_ADD0_MASK               0xFFFF
+#define SYSCFG_UR4_BCM4_ADD1_SHIFT              0
+#define SYSCFG_UR4_BCM4_ADD1_MASK               0xFFFF
+//#define SYSCFG_CFGR_CM4L_SHIFT                  0
+//#define SYSCFG_CFGR_CM4L_MASK                   0x1 
+/**@}*/
 
 /** @defgroup syscfg_pwrcr PWRCR SYSCFG configuration register
  * @ingroup syscfg_registers
  * @{*/
 #define SYSCFG_PWRCR_ODEN			BIT0
 /**@}*/
-
+void setcm4bootadd0(uint16_t bootadd);
+void setcm4bootadd1(uint16_t bootadd);
 
 /**@}*/
 

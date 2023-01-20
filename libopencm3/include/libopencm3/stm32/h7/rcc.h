@@ -122,7 +122,19 @@ LGPL License Terms @ref lgpl_license
 #define RCC_CR_HSION              BIT0
 /**@}*/
 
+/** @defgroup rcc_gcr_values RCC_GCR Values
+ * @ingroup rcc_registers
+@{*/
+#define RCC_GCR_WW1RSC_SHIFT                    0
+#define RCC_GCR_WW1RSC_MASK                     0x1
+#define RCC_GCR_WW2RSC_SHIFT                    1
+#define RCC_GCR_WW2RSC_MASK                     0x2
+#define RCC_GCR_BOOT_C1_SHIFT                   2
+#define RCC_GCR_BOOT_C1_MASK                    0x4
+#define RCC_GCR_BOOT_C2_SHIFT                   3
+#define RCC_GCR_BOOT_C2_MASK                    0x8
 
+              
 /** @defgroup rcc_cfgr_values RCC_CFGR Values
  * @ingroup rcc_registers
 @{*/
