@@ -142,6 +142,11 @@ void i2c_set_own_7bit_slave_address(uint32_t i2c, uint8_t slave)
 	I2C_OAR1(i2c) &= ~I2C_OAR1_OA1MODE;
 }
 
+void i2c_send_7bit_address(uint32_t i2c, uint8_t slave, uint8_t readwrite)
+{
+	I2C_TXDR(i2c) = (uint8_t)((slave << 1) | readwrite);
+}
+
 /*---------------------------------------------------------------------------*/
 /** @brief I2C Set the 10 bit Slave Address for the Peripheral.
  *
@@ -295,6 +300,24 @@ void i2c_disable_autoend(uint32_t i2c)
 {
 	I2C_CR2(i2c) &= ~I2C_CR2_AUTOEND;
 }
+
+void i2c_enable_ack(uint32_t i2c)
+{
+	I2C_OAR1(i2c) |= I2C_OAR1_OA1EN_ENABLE;
+}
+
+/*---------------------------------------------------------------------------*/
+/** @brief I2C Disable ACK
+
+Disables acking of own 7/10 bit address
+@param[in] i2c Unsigned int32. I2C register base address @ref i2c_reg_base.
+*/
+void i2c_disable_ack(uint32_t i2c)
+{
+	I2C_OAR1(i2c) &= ~I2C_OAR1_OA1EN_ENABLE;
+}
+
+
 
 bool i2c_nack(uint32_t i2c)
 {

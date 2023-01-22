@@ -10,28 +10,31 @@ void quad_setup(void)
 {
 /* the usual enable and setup pins for qspi
 */
+rcc_periph_clock_enable(RCC_QSPI);
+rcc_periph_reset_pulse(RST_QSPI);
+
 	gpio_mode_setup(GPIOF, GPIO_MODE_AF, GPIO_PUPD_PULLUP,
 						GPIO7 | GPIO10);
 	gpio_set_output_options(GPIOF, GPIO_OTYPE_PP, GPIO_OSPEED_100MHZ,
 						GPIO7 | GPIO10);
 	gpio_set_af(GPIOF, GPIO_AF9, GPIO7 | GPIO10);
 
-	gpio_mode_setup(GPIOD, GPIO_MODE_AF, GPIO_PUPD_PULLUP,
+	gpio_mode_setup(GPIOD, GPIO_MODE_AF, GPIO_PUPD_NONE,
 						GPIO11 | GPIO12 | GPIO13);
 	gpio_set_output_options(GPIOD, GPIO_OTYPE_PP, GPIO_OSPEED_100MHZ,
 						GPIO11 | GPIO12 | GPIO13);
 	gpio_set_af(GPIOD, GPIO_AF9, GPIO11 | GPIO12 | GPIO13);
 
-	gpio_mode_setup(GPIOG, GPIO_MODE_AF, GPIO_PUPD_PULLUP,
+	gpio_mode_setup(GPIOG, GPIO_MODE_AF, GPIO_PUPD_NONE,
 						GPIO6);
 	gpio_set_output_options(GPIOG, GPIO_OTYPE_PP, GPIO_OSPEED_100MHZ,
 						GPIO6);					
 	gpio_set_af(GPIOG, GPIO_AF10, GPIO6);
 
-QUADSPI_CR= 80<<QUADSPI_CR_PRESCALE_SHIFT 
+QUADSPI_CR= 80<<QUADSPI_CR_PRESCALE_SHIFT   //was 80
 	    | 3 << QUADSPI_CR_FTHRES_SHIFT
 	    |    QUADSPI_CR_EN ;
-QUADSPI_DCR = 22<<QUADSPI_DCR_FSIZE_SHIFT
+QUADSPI_DCR = 23<<QUADSPI_DCR_FSIZE_SHIFT
 		| 7 << QUADSPI_DCR_CSHT_SHIFT ;
 QUADSPI_ABR =0;
 QUADSPI_DLR =16;

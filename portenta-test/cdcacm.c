@@ -45,6 +45,7 @@
 #include "test_i2c.h"
 #include "usb.h"
 #include "adctest.h"
+//#include "i2c.h"
 
 #include <libopencm3/stm32/syscfg.h>
 /* Define this to nonzero, to have only one cdcacm interaface (usb serial port) active. */
@@ -72,8 +73,8 @@ static const struct usb_device_descriptor dev = {
 	.bDeviceProtocol = 1,
 	/* The size of the control endpoint for usb high speed devices *must* be 64, as dictated by the usb standard. */
 	.bMaxPacketSize0 = 64,
-	.idVendor = 0x0483,
-	.idProduct = 0x5740,
+	.idVendor = 0x0403,
+	.idProduct = 0xc631,
 	.bcdDevice = 0x0200,
 	.iManufacturer = 1,
 	.iProduct = 2,
@@ -225,6 +226,29 @@ static const struct usb_interface_descriptor iface_sourcesink2[] = {
 	}
 };
 
+const struct usb_endpoint_descriptor i2c_endpoint = {
+	.bLength = USB_DT_ENDPOINT_SIZE,
+	.bDescriptorType = USB_DT_ENDPOINT,
+	.bEndpointAddress = 0x84,
+	.bmAttributes = USB_ENDPOINT_ATTR_INTERRUPT,
+	.wMaxPacketSize = 4,
+	.bInterval = 0x20,
+};
+
+const struct usb_interface_descriptor i2c_iface = {
+	.bLength = USB_DT_INTERFACE_SIZE,
+	.bDescriptorType = USB_DT_INTERFACE,
+	.bInterfaceNumber = 3,
+	.bAlternateSetting = 0,
+	.bNumEndpoints = 1,
+	.bInterfaceClass = 0,
+	.bInterfaceSubClass = 0,
+	.bInterfaceProtocol = 0,
+	.iInterface = 5,
+
+	.endpoint = &i2c_endpoint,
+};
+
 static const struct usb_interface ifaces[] = {
 	{
 		.num_altsetting = 1,
@@ -238,14 +262,18 @@ static const struct usb_interface ifaces[] = {
 	{
 		.num_altsetting = 1,
 	    .altsetting = iface_sourcesink2,
-	}, 
+	},
+	{
+		.num_altsetting = 1,
+	    .altsetting = &i2c_iface,
+	},
 };
 
 static const struct usb_config_descriptor config = {
 	.bLength = USB_DT_CONFIGURATION_SIZE,
 	.bDescriptorType = USB_DT_CONFIGURATION,
 	.wTotalLength = 0,
-	.bNumInterfaces = 3,
+	.bNumInterfaces = 4,
 	.bConfigurationValue = 1,
 	.iConfiguration = 0,
 	.bmAttributes = 0x80,
@@ -258,11 +286,13 @@ static const char * usb_strings[] = {
 	"Black Sphere Technologies",
 	"Envie",
 	"DEMO",
+	"redfelineninja.org.uk",
+	"i2c-stm32f7-usb",
 };
 
 extern uint32_t _sidata, _sdata, _edata, _sbss, _ebss, _siitcm, _sidtcm, _sitcm, _sdtcm, _eitcm, _edtcm, _estack;
 
-uint32_t SystemCoreClock = 400000000;
+uint32_t SystemCoreClock = 400000;
 void SysTick_IRQn_handler( void ) {
   ++systick;
 }
@@ -309,6 +339,8 @@ void delay_ms( uint32_t ms ) {
   while ( systick < next ) { __WFI(); }
 }
 
+static uint64_t sys_tick_counter;
+
 uint32_t SysTick_Config(uint32_t ticks)
 {
 //  if ((ticks - 1UL) > SysTick_LOAD_RELOAD_Msk)
@@ -320,17 +352,31 @@ systick_set_reload(400000000-1);
 //  SysTick->LOAD  = (uint32_t)(ticks - 1UL);                         /* set reload register */
 //  NVIC_SetPriority (SysTick_IRQn, (1UL << __NVIC_PRIO_BITS) - 1UL); /* set Priority for Systick Interrupt */
  // SysTick->VAL   = 0UL;                                             /* Load the SysTick Counter Value */
-  	systick_counter_enable();
-  	systick_set_clocksource(STK_CSR_CLKSOURCE_AHB);
-  		systick_interrupt_enable();
-//  SysTick->CTRL  = SysTick_CTRL_CLKSOURCE_Msk |
-//                   SysTick_CTRL_TICKINT_Msk   |
-//                   SysTick_CTRL_ENABLE_Msk;                         /* Enable SysTick IRQ and SysTick Timer */
+//  	systick_counter_enable();
+ // 	systick_set_clocksource(STK_CSR_CLKSOURCE_AHB);
+ // 		systick_interrupt_enable();
+  STK_CSR  = STK_CSR_CLKSOURCE |
+                   STK_CSR_TICKINT   |
+                   STK_CSR_ENABLE;                         /* Enable SysTick IRQ and SysTick Timer */
   return (0UL);                                                     /* Function successful */
 }
 
+void sys_tick_handler(void)
+{
+	sys_tick_counter += 1000;
+}
+/*
+uint32_t time_now(void)
+{
+	return sys_tick_counter;
+}
 
 
+uint64_t time64_now(void)
+{
+	return sys_tick_counter;
+}
+*/
 /*
 static void SCB_EnableICache (void)
 {
@@ -425,26 +471,32 @@ if (coding->dwDTERate == 1200) {
 printf("entered reboot function \r\n");
 rcc_periph_clock_enable(RCC_RTCAPB);
 PWR_CR1 |= PWR_CR1_DBP;
+/* __asm( "NOP" );
 __asm( "NOP" );
-__asm( "NOP" );
-__asm( "NOP" );
+__asm( "NOP" ); */
 RTC_WPR = 0XCA;
+/*
 __asm( "NOP" );
 __asm( "NOP" );
 __asm( "NOP" );
+*/
 RTC_WPR = 0X53;
+/*
 __asm( "NOP" );
 __asm( "NOP" );
 __asm( "NOP" );
+*/
 RTC_ISR |= RTC_ISR_INIT;
-__asm( "NOP" );
+//__asm( "NOP" );
 while (!rtc_init_flag_is_ready());
-printf("done waiting for rtc init, now setting magicboot");  //todo used as delay cuz its almost perfect
+printf("done waiting for rtc init, now setting magicboot\r\n");  //todo used as delay cuz its almost perfect
+
 __asm( "NOP" );
 __asm( "NOP" );
 __asm( "NOP" );
 __asm( "NOP" );
-RTC_BKPXR(0) = 0xDF59;
+
+RTC_BKPXR(0) = 0xDF59;  //arduino also has DFU_MAGIC_SERIAL_ONLY_RESET   0xb0  curious
 __asm( "NOP" );
 __asm( "NOP" );
 __asm( "NOP" );
@@ -994,19 +1046,23 @@ int main(void)
 	st_init();
 	put_status("after stInit :");
 	    printf("b4 i2c setup\r\n");
+//	i2c_init();
     i2c_setup();
      printf("after i2c setup \r\n");
     i2ctest();
-     printf("after i2c test \r\n");
+    printf("after i2c test \r\n");
+//    i2cscan();
+    printf("after i2c_scan \r\n");
  //   spi_test();
 //    printf("after spi test \r\n");
 	usbd_dev = usbd_init(&stm32f207_usb_driver, &dev, &config,
-		usb_strings, 3,
+		usb_strings, 5,
 			usbd_control_buffer, sizeof(usbd_control_buffer));
 
 
 	usbd_register_set_config_callback(usbd_dev, cdcacm_set_config);
     usbd_register_set_config_callback(usbd_dev, usbadc_set_config);
+//    usbd_register_set_config_callback(usbd_dev, usb_set_config);
     
 	nvic_enable_irq(NVIC_OTG_HS_IRQ);
     gpio_clear(GPIOK, GPIO5);
