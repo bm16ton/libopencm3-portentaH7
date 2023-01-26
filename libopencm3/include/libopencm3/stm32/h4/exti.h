@@ -1,5 +1,13 @@
-/* This provides unification of code over STM32 subfamilies */
-
+/** @defgroup exti_defines EXTI Defines
+ *
+ * @ingroup STM32H7xx_defines
+ *
+ * @brief <b>Defined Constants and Types for the STM32H7xx EXTI Control</b>
+ *
+ * @version 1.0.0
+ *
+ * LGPL License Terms @ref lgpl_license
+ *  */
 /*
  * This file is part of the libopencm3 project.
  *
@@ -16,23 +24,20 @@
  * You should have received a copy of the GNU Lesser General Public License
  * along with this library.  If not, see <http://www.gnu.org/licenses/>.
  */
+/**@{*/
+#ifndef LIBOPENCM3_EXTI_H
+#define LIBOPENCM3_EXTI_H
 
-#include <libopencm3/cm3/common.h>
-#include <libopencm3/stm32/memorymap.h>
+#include <libopencm3/stm32/common/exti_common_all.h>
+#include <libopencm3/stm32/common/exti_common_v2.h>
 
-#if defined(STM32F4)
-#       include <libopencm3/stm32/f4/quadspi.h>
-#elif defined(STM32F7)
-#       include <libopencm3/stm32/f7/quadspi.h>
-#elif defined(STM32G4)
-#       include <libopencm3/stm32/g4/quadspi.h>
-#elif defined(STM32H4)
-#       include <libopencm3/stm32/h4/quadspi.h>
-#elif defined(STM32H7)
-#       include <libopencm3/stm32/h7/quadspi.h>
-#elif defined(STM32L4)
-#       include <libopencm3/stm32/l4/quadspi.h>
-#else
-#       error "quadspi.h not available for this family."
-#endif
+/** EXTI CPU Event Pending Register 1 */
+#define EXTI_CPUPR1	MMIO32(EXTI_BASE + 0x88)
+#define EXTI_PR 	EXTI_CPUPR1
 
+BEGIN_DECLS
+
+END_DECLS
+
+#endif  /* LIBOPENCM3_EXTI_H */
+/**@}*/

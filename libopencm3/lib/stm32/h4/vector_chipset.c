@@ -1,7 +1,8 @@
-/* This provides unification of code over STM32 subfamilies */
-
 /*
  * This file is part of the libopencm3 project.
+ *
+ * Copyright (C) 2010 Piotr Esden-Tempski <piotr@esden.net>
+ * Copyright (C) 2011 Fergus Noble <fergusnoble@gmail.com>
  *
  * This library is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
@@ -17,22 +18,10 @@
  * along with this library.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <libopencm3/cm3/common.h>
-#include <libopencm3/stm32/memorymap.h>
+#include <libopencm3/cm3/scb.h>
 
-#if defined(STM32F4)
-#       include <libopencm3/stm32/f4/quadspi.h>
-#elif defined(STM32F7)
-#       include <libopencm3/stm32/f7/quadspi.h>
-#elif defined(STM32G4)
-#       include <libopencm3/stm32/g4/quadspi.h>
-#elif defined(STM32H4)
-#       include <libopencm3/stm32/h4/quadspi.h>
-#elif defined(STM32H7)
-#       include <libopencm3/stm32/h7/quadspi.h>
-#elif defined(STM32L4)
-#       include <libopencm3/stm32/l4/quadspi.h>
-#else
-#       error "quadspi.h not available for this family."
-#endif
-
+static void pre_main(void)
+{
+	/* Enable access to Floating-Point coprocessor. */
+	SCB_CPACR |= SCB_CPACR_FULL * (SCB_CPACR_CP10 | SCB_CPACR_CP11);
+}

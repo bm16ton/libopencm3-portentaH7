@@ -40,6 +40,8 @@
 #       include <libopencm3/stm32/g0/dac.h>
 #elif defined(STM32G4)
 #	include <libopencm3/stm32/g4/dac.h>
+#elif defined(STM32H4)
+#       include <libopencm3/stm32/h4/dac.h>
 #elif defined(STM32H7)
 #       include <libopencm3/stm32/h7/dac.h>
 #else

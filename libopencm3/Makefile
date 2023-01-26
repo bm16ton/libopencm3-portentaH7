@@ -22,7 +22,7 @@ PREFIX		?= arm-none-eabi-
 STYLECHECK      := scripts/checkpatch.pl
 STYLECHECKFLAGS := --no-tree -f --terse --mailback
 
-TARGETS ?= stm32/h7
+TARGETS ?= stm32/h4 stm32/h7
 
 
 # Be silent per default, but 'make V=1' will show all compiler calls.

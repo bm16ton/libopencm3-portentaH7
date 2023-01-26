@@ -47,7 +47,7 @@ enum dbgmcu_idcode_dev_id {
 
 /** Known device revisions */
 enum dbgmu_idcode_rev_id {
-#if defined(STM32H7)
+#if defined(STM32H7) || defined(STM32H4)
 	DBGMCU_IDCODE_REV_ID_Z = 0x1001 << 16,
 	DBGMCU_IDCODE_REV_ID_Y = 0x1003 << 16,
 	DBGMCU_IDCODE_REV_ID_X = 0x2001 << 16,
