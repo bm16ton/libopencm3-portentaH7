@@ -1,0 +1,5 @@
+#!/bin/bash
+PORTENTA=$(listSerialC  | grep -i Envie | awk '{ print $1 }')
+stty -F $PORTENTA 1200
+sleep 3.5
+dfu-util-11 -D $1 -a 0 --dfuse-address 0x08100000:leave  
