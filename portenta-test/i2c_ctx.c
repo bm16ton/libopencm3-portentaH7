@@ -84,21 +84,22 @@ void i2c_ctx_init(i2c_ctx_t *c, uint32_t pi2c)
 
 void i2c_ctx_reset(i2c_ctx_t *c)
 {
-	/* TODO: Latest opencm3 has this code built in */
     (void)c;
 	rcc_periph_clock_enable(RCC_I2C3);
 
-    printf("i2c b4 reset \r\n");
+ //   printf("i2c b4 reset \r\n");
 	i2c_reset(I2C3);
 	/* Setup GPIO pin GPIO_USART2_TX/GPIO9 on GPIO port A for transmit. */
-	gpio_mode_setup(GPIOH, GPIO_MODE_AF, GPIO_PUPD_NONE, GPIO7 | GPIO8);
+	gpio_mode_setup(GPIOH, GPIO_MODE_AF, GPIO_PUPD_PULLUP, GPIO7 | GPIO8);
 	gpio_set_output_options(GPIOH, GPIO_OTYPE_OD, GPIO_OSPEED_100MHZ,
 				GPIO7 | GPIO8);
 	gpio_set_af(GPIOH, GPIO_AF4, GPIO7 | GPIO8);
 	i2c_peripheral_disable(I2C3);
+	i2c_reset(I2C3);
 //	i2c_set_prescaler(I2C3, 8);
 	//configure ANFOFF DNF[3:0] in CR1
-	i2c_enable_analog_filter(I2C3);
+//	i2c_enable_analog_filter(I2C3);
+    i2c_disable_analog_filter(I2C3);
 	i2c_set_digital_filter(I2C3, 0);
 	/* HSI is at 8Mhz */
 	i2c_set_speed(I2C3, i2c_speed_fm_400k, 8);
@@ -107,7 +108,11 @@ void i2c_ctx_reset(i2c_ctx_t *c)
 	//addressing mode
 	i2c_set_7bit_addr_mode(I2C3);
 	i2c_peripheral_enable(I2C3);
-
+	i2c_set_own_7bit_slave_address(I2C3, 0x00);
+	
+	        for (uint32_t loop = 0; loop < 1500; ++loop) {
+    __asm__("nop");
+  } 
 }
 
 pt_state_t i2c_ctx_start(i2c_ctx_t *c)
@@ -140,7 +145,7 @@ pt_state_t i2c_ctx_sendaddr(i2c_ctx_t *c, uint16_t addr,
 	PT_BEGIN(&c->leaf);
 
 	c->bytes_remaining = bytes_to_read;
-
+    i2c_set_7bit_address(c->i2c, addr);
 	i2c_send_7bit_address(c->i2c, addr, !!bytes_to_read);
 
 	while (!i2c_ctx_is_timed_out(c) &&		// bad
