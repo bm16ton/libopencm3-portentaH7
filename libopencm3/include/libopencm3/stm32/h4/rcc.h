@@ -28,7 +28,7 @@ LGPL License Terms @ref lgpl_license
 #define LIBOPENCM3_RCC_H
 
 #include <libopencm3/cm3/common.h>
-#include <libopencm3/stm32/h7/pwr.h>
+#include <libopencm3/stm32/h4/pwr.h>
 
 /**@{*/
 

@@ -47,7 +47,7 @@ specific memorymap.h header before including this header file.*/
 /* ----- ADC registers  -----------------------------------------------------*/
 /* Sample Time Register 2 */
 #define ADC_SMPR2(adc)		MMIO32((adc) + 0x18)
-#ifndef STM32H7
+#if !defined(STM32H7) && !defined(STM32H4)
 /* Watchdog Threshold Register 2 */
 #define ADC_TR2(adc)		MMIO32((adc) + 0x24)
 /* Watchdog Threshold Register 3 */
@@ -80,14 +80,14 @@ specific memorymap.h header before including this header file.*/
 #define ADC_AWD3CR(adc)		MMIO32((adc) + 0xA4)
 
 /* Differential Mode Selection Register 2 (ADCx_DIFSEL, x=1..4) DIFSEL */
-#ifndef STM32H7
+#if !defined(STM32H7) && !defined(STM32H4)
 #define ADC_DIFSEL(adc)		MMIO32((adc) + 0xB0)
 #else
 #define ADC_DIFSEL(adc)		MMIO32((adc) + 0xC0)
 #endif /* STM32H7 */
 
 /* Calibration Factors (ADCx_CALFACT, x=1..4) CALFACT */
-#ifndef STM32H7
+#if !defined(STM32H7) && !defined(STM32H4)
 #define ADC_CALFACT(adc)	MMIO32((adc) + 0xB4)
 #else
 #define ADC_CALFACT(adc)	MMIO32((adc) + 0xC4)
@@ -154,7 +154,7 @@ specific memorymap.h header before including this header file.*/
 #define ADC_CFGR1_DISCNUM_MASK  (0x7 << ADC_CFGR1_DISCNUM_SHIFT)
 #define ADC_CFGR1_DISCNUM_VAL(x)	(((x) - 1) << ADC_CFGR1_DISCNUM_SHIFT)
 
-#ifndef STM32H7
+#if !defined(STM32H7) && !defined(STM32H4)
  /* EXTSEL[3:0]: External trigger selection for regular group */
  #define ADC_CFGR1_EXTSEL_SHIFT		6
  #define ADC_CFGR1_EXTSEL_MASK		(0xf << ADC_CFGR1_EXTSEL_SHIFT)

@@ -50,7 +50,7 @@ specific memorymap.h header before including this header file.*/
 #define ADC_CFGR2(adc)			MMIO32((adc) + 0x10)
 /** Sample Time Register 1 */
 #define ADC_SMPR1(adc)			MMIO32((adc) + 0x14)
-#ifndef STM32H7
+#if !defined(STM32H7) && !defined(STM32H4)
 /** Watchdog Threshold Register 1*/
 #define ADC_TR1(adc)			MMIO32((adc) + 0x20)
 #endif /* STM32H7 */
@@ -151,7 +151,7 @@ specific memorymap.h header before including this header file.*/
 #define ADC_CFGR1_EXTEN_FALLING_EDGE	(0x2 << 10)
 #define ADC_CFGR1_EXTEN_BOTH_EDGES	(0x3 << 10)
 /**@}*/
-#ifndef STM32H7
+#if !defined(STM32H7) && !defined(STM32H4)
  /** ALIGN: Data alignment */
  #define ADC_CFGR1_ALIGN		(1 << 5)
 

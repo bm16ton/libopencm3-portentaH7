@@ -41,9 +41,9 @@ LGPL License Terms @ref lgpl_license
 #define MAX_USER_CONTROL_CALLBACK	4
 #define MAX_USER_SET_CONFIG_CALLBACK	4
 
-#if defined(STM32F4) | defined(STM32F7)
+#if defined(STM32F4) || defined(STM32F7)
 #define ENDPOINT_COUNT 8
-#elif defined(STM32H7) 
+#elif defined(STM32H7) || defined(STM32H4)
 #define ENDPOINT_COUNT 15
 #else
 #define ENDPOINT_COUNT 4

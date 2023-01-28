@@ -31,7 +31,7 @@
 /* Receive FIFO size in 32-bit words. */
 #define RX_FIFO_SIZE 512
 
-#if defined(STM32H7)
+#if defined(STM32H7) || defined(STM32H4)
 #define USB_OTG_HS_BASE USB1_OTG_HS_BASE
 #endif
 
@@ -61,7 +61,7 @@ static usbd_device *stm32f207_usbd_init(void)
 {
 
 
-#if defined(STM32H7)
+#if defined(STM32H7) || defined(STM32H4)
 rcc_periph_clock_enable(RCC_USB1OTGHSULPIEN);
 	rcc_periph_clock_enable(RCC_USB1OTGHSEN);
 #else
