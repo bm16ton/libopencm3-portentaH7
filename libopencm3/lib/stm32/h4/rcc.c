@@ -299,6 +299,11 @@ uint32_t rcc_get_fmc_clk_freq(uint32_t fmc  __attribute__((unused)))
 	}
 }
 
+uint32_t rcc_get_core2_clk_freq(void)
+{
+		return rcc_clock_tree.pll2.p_mhz * HZ_PER_MHZ;
+}
+
 uint32_t rcc_get_usart_clk_freq(uint32_t usart)
 {
 	uint32_t clksel, pclk;

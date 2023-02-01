@@ -789,6 +789,9 @@ uint32_t rcc_get_i2c_clk_freq(uint32_t i2c);
 uint32_t rcc_get_qspi_clk_freq(uint32_t qspi  __attribute__((unused)));
 
 uint32_t rcc_get_fmc_clk_freq(uint32_t fmc  __attribute__((unused)));
+
+uint32_t rcc_get_core2_clk_freq(void);
+
 /**
  * Get the peripheral clock speed for the SPI device at base specified.
  * @param spi  Base address of SPI device to get clock frequency for (e.g. SPI1_BASE).

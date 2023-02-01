@@ -32,9 +32,31 @@
 #include <libopencm3/stm32/common/exti_common_v2.h>
 
 /** EXTI CPU Event Pending Register 1 */
-#define EXTI_CPUPR1	MMIO32(EXTI_BASE + 0x88)
+#define EXTI_CPUPR1	MMIO32(EXTI_BASE + 0xC8)
 #define EXTI_PR 	EXTI_CPUPR1
+#define EXTI_C2CPUPR1	EXTI_CPUPR1
+#define EXTI_C2PR 	EXTI_C2CPUPR1
 
+#define EXTI_C2IMR1			MMIO32(EXTI_BASE + 0xC0)
+#define EXTI_C2IMR			EXTI_C2IMR1
+
+/** EXTI Event Mask Registers 1 */
+#define EXTI_C2EMR1			MMIO32(EXTI_BASE + 0xC4)
+#define EXTI_C2EMR			EXTI_C2EMR1
+
+/** EXTI Interrupt Mask Registers C2 M4 */
+#define EXTI_C2IMR2			MMIO32(EXTI_BASE + 0xD0)
+/** EXTI Event Mask Registers C2 M4 */
+#define EXTI_C2EMR2			MMIO32(EXTI_BASE + 0xD4)
+/** EXTI CPU Event Pending Register 2 C2 M4 */
+#define EXTI_C2CPUPR2	MMIO32(EXTI_BASE + 0xD8)
+
+/** EXTI Interrupt Mask Registers 3 C2 M4 */
+#define EXTI_C2IMR3			MMIO32(EXTI_BASE + 0xE0)
+/** EXTI Event Mask Registers C2 M4 */
+#define EXTI_C2EMR3			MMIO32(EXTI_BASE + 0xE4)
+/** EXTI CPU Event Pending Register 3 C2 M4 */
+#define EXTI_C2CPUPR3	MMIO32(EXTI_BASE + 0xE8)
 BEGIN_DECLS
 
 END_DECLS

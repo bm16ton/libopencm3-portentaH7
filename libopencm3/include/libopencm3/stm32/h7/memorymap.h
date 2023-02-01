@@ -54,7 +54,7 @@
 #define DMAMUX2_BASE        0x58025800U
 #define ADC3_BASE           0x58026000U
 #define HSEM_BASE           0x58026400U
-
+#define HSEM_COMMON         (HSEM_BASE + 0x100UL)
 /* APB4 Peripherals */
 #define SAI4_BASE           0x58005400U
 #define IWDG1_BASE          0x58004800U

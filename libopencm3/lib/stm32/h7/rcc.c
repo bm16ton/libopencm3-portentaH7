@@ -42,6 +42,20 @@ static struct {
 	.per.pclk4_mhz = RCC_HSI_BASE_FREQUENCY / HZ_PER_MHZ
 };
 
+/*
+void rcc_disable_pll(int pll_num) {
+if 
+	*RCC_CR &= ~(RCC_CR_PLL1ON);
+	while ((*RCC_CR & RCC_CR_PLL1RDY)) {
+	} 
+	
+	
+	
+//  enable the main PLL
+	*RCC_CR |= (1 << 24 );
+	while (!(*RCC_CR & RCC_CR_PLL1RDY)) {
+	}	
+*/
 static void rcc_configure_pll(uint32_t clkin, const struct pll_config *config, int pll_num) {
 	/* Only concern ourselves with the PLL if the input clock is enabled. */
 	if (config->divm == 0 || pll_num < 1 || pll_num > 3) {
@@ -297,6 +311,11 @@ uint32_t rcc_get_fmc_clk_freq(uint32_t fmc  __attribute__((unused)))
 	} else {
 		return 0U;
 	}
+}
+
+uint32_t rcc_get_core2_clk_freq(void)
+{
+		return rcc_clock_tree.pll2.p_mhz * HZ_PER_MHZ;
 }
 
 uint32_t rcc_get_usart_clk_freq(uint32_t usart)
