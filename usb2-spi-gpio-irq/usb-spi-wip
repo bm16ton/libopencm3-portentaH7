@@ -1,0 +1,69 @@
+#define CMD_ECHO       0
+#define CMD_CSNUM      1
+#define CMD_SET_DELAY  2
+#define CMD_GET_STATUS 3
+#define CMD_TX         4
+#define CMD_RX         5
+#define CMD_TXRX       6
+
+#define CMD_SPI_IO     4
+#define CMD_SPI_BEGIN  1  // flag fo I2C_IO
+#define CMD_SPI_END    2  // flag fo I2C_IO
+
+
+#define STATUS_IDLE	   0
+
+static uint8_t status = STATUS_IDLE;
+
+unsigned char my_spi_read8(unsigned long spi)
+{
+unsigned char d;
+SPI_CR1(spi) |= SPI_CR1_CSTART;
+while(!(SPI_SR(spi) & SPI_SR_RXP));
+d = SPI_TXDR8(spi);
+//while( !( SPI_SR(spi) & SPI_SR_RXWNE));
+//my_spi_flush(spi);
+return d;
+}
+
+
+static int usb_spi_io(struct usb_setup_data *req, uint8_t *buf, uint16_t *len)
+{
+	uint32_t reg32 __attribute__((unused));
+
+	/* Interpret the request */
+	uint8_t cmd = req->bRequest;
+	uint8_t csnum = req->wIndex;
+	uint8_t spidir = req->wValue;
+	uint8_t size = req->wLength;
+
+  if (spidir == CMD_TX) {
+  ST_CS_ACTIVE;
+		for (uint16_t i = 0; i < size; i++)
+		    {
+			    my_spi_send8(SPI2, (uint8_t)(buf[i]));
+			    my_spi_send8(SPI2, (uint8_t)(buf[i + 1]));
+			    i = i + 1;
+		    }
+		ST_CS_IDLE;
+  }
+
+  if (spidir == CMD_RX) {
+  ST_CS_ACTIVE;
+		for (uint16_t i = 0; i < size; i++)
+		    {
+			    buf[i] = (uint8_t)my_spi_read8(SPI2);
+			    buf[i + 1] = (uint8_t)my_spi_read8(SPI2);
+			    i = i + 1;
+		    }
+		ST_CS_IDLE;
+  }
+  
+ ST_CS_IDLE;
+ *len = 0;
+	return USBD_REQ_HANDLED;
+}
+
+
+
+

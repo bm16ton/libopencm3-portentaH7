@@ -1,0 +1,117 @@
+EXTERN(vector_table)
+ENTRY(reset_handler)
+MEMORY
+{
+ ram (rwx) : ORIGIN = 0x24000000, LENGTH = 512K
+ rom (rx) : ORIGIN = 0x08040000, LENGTH = 2M
+ ram2 (rwx) : ORIGIN = 0x30020000, LENGTH = 128K
+ ram3 (rwx) : ORIGIN = 0x30040000, LENGTH = 128K
+ ram4 (rwx) : ORIGIN = 0x38000000, LENGTH = 32K
+ ram5 (rwx) : ORIGIN = 0x00000000, LENGTH = 64K
+ ccm (rwx) : ORIGIN = 0x20000000, LENGTH = 128K
+ SDRAM (rwx)    : ORIGIN = 0x60000000, LENGTH = 8M
+}
+SECTIONS
+{
+SD :
+    {
+        . = ALIGN(4);
+        _ssdram = .;
+	KEEP(*(.sdramtext.vectors))
+        . = ALIGN(4);
+        *(.sdramtext)
+        . = ALIGN(4);
+	*(.sdramdata)
+	. = ALIGN(4);
+        _esdram = .;
+    } >SDRAM AT> rom
+ .text : {
+  *(.vectors)
+  *(.text*)
+  . = ALIGN(4);
+  *(.rodata*)
+  . = ALIGN(4);
+ } >rom
+ .preinit_array : {
+  . = ALIGN(4);
+  __preinit_array_start = .;
+  KEEP (*(.preinit_array))
+  __preinit_array_end = .;
+ } >rom
+ .init_array : {
+  . = ALIGN(4);
+  __init_array_start = .;
+  KEEP (*(SORT(.init_array.*)))
+  KEEP (*(.init_array))
+  __init_array_end = .;
+ } >rom
+ .fini_array : {
+  . = ALIGN(4);
+  __fini_array_start = .;
+  KEEP (*(.fini_array))
+  KEEP (*(SORT(.fini_array.*)))
+  __fini_array_end = .;
+ } >rom
+ .ARM.extab : {
+  *(.ARM.extab*)
+ } >rom
+ .ARM.exidx : {
+  __exidx_start = .;
+  *(.ARM.exidx*)
+  __exidx_end = .;
+ } >rom
+ . = ALIGN(4);
+ _etext = .;
+ .noinit (NOLOAD) : {
+  *(.noinit*)
+ } >ram
+ . = ALIGN(4);
+ .data : {
+  _data = .;
+  *(.data*)
+  *(.ramtext*)
+  . = ALIGN(4);
+  _edata = .;
+ } >ram AT >rom
+ _data_loadaddr = LOADADDR(.data);
+ .bss : {
+  *(.bss*)
+  *(COMMON)
+  . = ALIGN(4);
+  _ebss = .;
+ } >ram
+ .ccm : {
+  _ccm = .;
+  *(.ccmram*)
+  . = ALIGN(4);
+  _eccm = .;
+ } >ccm
+ .ram2 : {
+  _ram2 = .;
+  *(.ram2*)
+  . = ALIGN(4);
+  _eram2 = .;
+ } >ram2
+ .ram3 : {
+  _ram3 = .;
+  *(.ram3*)
+  . = ALIGN(4);
+  _eram3 = .;
+ } >ram3
+ .ram4 : {
+  _ram4 = .;
+  *(.ram4*)
+  . = ALIGN(4);
+  _eram4 = .;
+ } >ram4
+ .ram5 : {
+  _ram5 = .;
+  *(.ram5*)
+  . = ALIGN(4);
+  _eram5 = .;
+ } >ram5
+ /DISCARD/ : { *(.eh_frame) }
+ . = ALIGN(4);
+ end = .;
+}
+PROVIDE(_stack = ORIGIN(ram) + LENGTH(ram));
