@@ -408,7 +408,7 @@ static const struct irq_chip usb_gpio_irqchip = {
 #endif
 
 
-
+/*
 static void usbspi_delete(struct kref *kref)
 {
 	struct spi_tiny_usb *dev = to_usbspi_dev(kref);
@@ -417,6 +417,7 @@ static void usbspi_delete(struct kref *kref)
 	usb_put_dev(dev->usb_dev);
 	kfree(dev);
 }
+*/
 
 struct bulk_desc {
 	unsigned int dir_out;
@@ -537,9 +538,9 @@ static int spi_tiny_usb_xfer_one(struct spi_master *master, struct spi_message *
         if (priv->oldlsb != (priv->spidev->mode & SPI_LSB_FIRST)) {
         printk("mode lsb claims change \r\n");
             if (priv->oldlsb != 0x08) {
-                usb_write(priv, 10, 0x08, 0x08, NULL, 0);
+                usb_write(priv, 160, 0x08, 0x08, NULL, 0);
                 } else {
-                usb_write(priv, 10, 0x00, 0x00, NULL, 0);
+                usb_write(priv, 160, 0x00, 0x00, NULL, 0);
             }
         }
 
@@ -547,7 +548,7 @@ static int spi_tiny_usb_xfer_one(struct spi_master *master, struct spi_message *
 
         if (oldspihz != t->speed_hz) {
         printk("setting clock \r\n");
-        wait = usb_write(priv, 7, (t->speed_hz / 10000), (t->speed_hz / 10000), NULL, 0);
+        wait = usb_write(priv, 67, (t->speed_hz / 10000), (t->speed_hz / 10000), NULL, 0);
            if (wait) {
            ;
            }
@@ -561,7 +562,7 @@ static int spi_tiny_usb_xfer_one(struct spi_master *master, struct spi_message *
 	if (priv->last_mode != priv->spidev->mode) {
 		u8 spi_mode = priv->spidev->mode & (SPI_CPOL | SPI_CPHA);
 		printk("spi_mode = %d\r\n", spi_mode);
-        wait = usb_write(priv, 8, spi_mode, spi_mode, NULL, 0);
+        wait = usb_write(priv, 68, spi_mode, spi_mode, NULL, 0);
            if (wait) {
            ;
            }
@@ -570,7 +571,7 @@ static int spi_tiny_usb_xfer_one(struct spi_master *master, struct spi_message *
     priv->last_mode = priv->spidev->mode;
     
    if (priv->last_bpw != priv->spidev->bits_per_word) {
-      wait = usb_write(priv, 9, priv->spidev->bits_per_word, priv->spidev->bits_per_word, NULL, 0);
+      wait = usb_write(priv, 69, priv->spidev->bits_per_word, priv->spidev->bits_per_word, NULL, 0);
            if (wait) {
            ;
            }
@@ -586,7 +587,7 @@ static int spi_tiny_usb_xfer_one(struct spi_master *master, struct spi_message *
 			spi_flags |= FLAGS_END;
 
 		if (t->tx_buf) {
-			usb_write(priv, 4, t->len, t->len, NULL, 0);
+			usb_write(priv, 64, t->len, t->len, NULL, 0);
 		dev_dbg(&master->dev,
 			"tx: %p rx: %p len: %d speed: %d flags: %d delay: %d\n", t->tx_buf,
 			t->rx_buf, t->len, t->speed_hz, spi_flags, t->delay.value);
@@ -602,7 +603,7 @@ static int spi_tiny_usb_xfer_one(struct spi_master *master, struct spi_message *
 
 		if (t->rx_buf) {
 //		    printk("RX bulk start \r\n");
-			usb_write(priv, 5, t->len, t->len, NULL, 0);
+			usb_write(priv, 65, t->len, t->len, NULL, 0);
             usbspi_read_data(priv->interface, t->rx_buf, t->len);
 		}
 
@@ -689,11 +690,11 @@ static int spi_tiny_usb_probe(struct usb_interface *interface,
 		}
 	}
 */
-	if (inf == 1) {
+	if (inf == 0) {
  //  priv->usb_dev = usb_get_dev(usb_dev);
    priv->usb_dev = usb_get_dev(interface_to_usbdev(interface));
 //   priv->int_in_endpoint = endpoint;
-    endpoint = &iface_desc->endpoint[2].desc;
+    endpoint = &iface_desc->endpoint[1].desc;
    retval = usb_find_int_in_endpoint(interface->cur_altsetting, &endpoint);
    if (retval) {
    printk("USBSPI Could not find int-in endpoint\n");
@@ -708,7 +709,7 @@ static int spi_tiny_usb_probe(struct usb_interface *interface,
    printk(KERN_INFO "priv->int_in_endpointAddr: %d \n", priv->int_in_endpointAddr);
    printk(KERN_INFO "priv->int_in_endpoint->bEndpointAddress: %d \n", priv->int_in_endpoint->bEndpointAddress);
    // allocate our urb for interrupt in 
-//   if (noirq == 0) {
+   if (noirq == 0) {
    priv->int_in_urb = usb_alloc_urb(0, GFP_KERNEL);
    //allocate the interrupt buffer to be used
    priv->int_in_buf = kmalloc(le16_to_cpu(priv->int_in_endpoint->wMaxPacketSize), GFP_KERNEL);
@@ -732,7 +733,7 @@ static int spi_tiny_usb_probe(struct usb_interface *interface,
      {
         printk(KERN_ALERT "Failed to submit urb \n");
      }
- //   }   // noirq
+    }   // noirq
    /// gpio_chip struct info is inside KERNEL/include/linux/gpio/driver.h
    priv->chip.label = "vusb-gpio"; //name for diagnostics
 //   data->chip.priv = &data->usb_dev->priv; // optional privice providing the GPIOs
@@ -756,7 +757,7 @@ static int spi_tiny_usb_probe(struct usb_interface *interface,
    priv->chip.direction_output = _direction_output;
    priv->chip.to_irq = i2c_gpio_to_irq;
    priv->chip.names = gpio_names;
-//   if (noirq == 0) {
+   if (noirq == 0) {
    #if LINUX_VERSION_CODE <= KERNEL_VERSION(5,18,0)    
    priv->irq.name = "usbgpio-irq";
    priv->irq.irq_set_type = usbirq_irq_set_type;
@@ -783,7 +784,7 @@ static int spi_tiny_usb_probe(struct usb_interface *interface,
 	
 //   girq->irq_num = rc;
 
-//} //end of noirq
+} //end of noirq
 
    if (gpiochip_add(&priv->chip) < 0)
      {
@@ -799,15 +800,15 @@ static int spi_tiny_usb_probe(struct usb_interface *interface,
 //   gpio_direction_input(5);
 //   gpio_export_link(data->chip, 3, BTN);
 
-//if (noirq == 0) {
+if (noirq == 0) {
    i2c_gpio_to_irq(&priv->chip, 4);
-//}  
+}  
    
    
    INIT_WORK(&priv->work, _gpio_work_job);
    INIT_WORK(&priv->work2, _gpio_work_job2);
    
-    } else {    // end of interface 1 setup
+    } else {    // end of interface 0 setup
 
 
 	retval = usb_find_common_endpoints(interface->cur_altsetting,
@@ -888,7 +889,9 @@ static int spi_tiny_usb_probe(struct usb_interface *interface,
 	priv->spiinfo.max_speed_hz = 100000000;
 	priv->spiinfo.chip_select = 0;
 	priv->spiinfo.mode = SPI_MODE_0;
-
+	if (noirq == 0) {
+    priv->spiinfo.irq = GPIO_irqNumber;
+    }
 	priv->spiinfo.controller_data = priv;
 	priv->spidev = spi_new_device(priv->master, &priv->spiinfo);
 	if (!priv->spidev)

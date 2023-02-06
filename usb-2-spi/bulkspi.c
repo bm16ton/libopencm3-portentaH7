@@ -22,13 +22,13 @@
 #define CMD_CS         1
 #define CMD_SET_DELAY  2
 #define CMD_GET_STATUS 3
-#define CMD_TX         4
-#define CMD_RX         5
+#define CMD_TX         64
+#define CMD_RX         65
 #define CMD_TXRX       6
-#define CMD_HZ         7
-#define CMD_MODE       8
-#define CMD_BPW        9
-#define CMD_LSB        10
+#define CMD_HZ         67
+#define CMD_MODE       68
+#define CMD_BPW        69
+#define CMD_LSB        160
 #define CMD_SPI_IO     4
 #define CMD_SPI_BEGIN  1  
 #define CMD_SPI_END    2 
@@ -190,7 +190,7 @@ void recusb_sendspi(usbd_device *dev, uint32_t len) {
 	uint8_t *dest;
     int x;
 
-	x = usbd_ep_read_packet(dev, 0x01, buf, BULK_EP_MAXPACKET);
+	x = usbd_ep_read_packet(dev, 0x02, buf, BULK_EP_MAXPACKET);
     if (x) {
         ;
         }
@@ -213,7 +213,7 @@ void recspi_sendusb(usbd_device *dev, uint32_t len) {
 //        {
 //            printf("values sending to usb buf = %d\r\n", buf[i]);
 //	    }
-    x = usbd_ep_write_packet(dev, 0x81, buf, len);
+    x = usbd_ep_write_packet(dev, 0x82, buf, len);
     if (x != BULK_EP_MAXPACKET) {
 	;
 	}
@@ -261,9 +261,9 @@ void usbspi_set_config(usbd_device *dev, uint16_t wValue)
 {
     configured = wValue;
 
-		usbd_ep_setup(dev, 0x01, USB_ENDPOINT_ATTR_BULK, BULK_EP_MAXPACKET,
+		usbd_ep_setup(dev, 0x02, USB_ENDPOINT_ATTR_BULK, BULK_EP_MAXPACKET,
 			spi_ss_out_cb);
-		usbd_ep_setup(dev, 0x81, USB_ENDPOINT_ATTR_BULK, BULK_EP_MAXPACKET,
+		usbd_ep_setup(dev, 0x82, USB_ENDPOINT_ATTR_BULK, BULK_EP_MAXPACKET,
 			spi_ss_in_cb);
 		usbd_register_control_callback(
 			dev,
@@ -271,5 +271,5 @@ void usbspi_set_config(usbd_device *dev, uint16_t wValue)
 			USB_REQ_TYPE_TYPE,
 			spi_control_request);
 		/* Prime source for IN data. */
-		spi_ss_in_cb(dev, 0x81);
+		spi_ss_in_cb(dev, 0x82);
 }
