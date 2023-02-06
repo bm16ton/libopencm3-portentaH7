@@ -229,6 +229,7 @@ static void my_delay_1( void )
 static void irq_pin_init(void)
 {
 //    nvic_disable_irq(NVIC_EXTI0_IRQ);
+    gpio_toggle(GPIOK, GPIO6);
 	my_delay_2();
     nvic_enable_irq(NVIC_EXTI1_IRQ);					
 	gpio_mode_setup(GPIO5_PORT, GPIO_MODE_INPUT, GPIO_PUPD_NONE, GPIO5_PIN);
@@ -241,6 +242,7 @@ static void irq_pin_init(void)
 
 static void irq_none(void)
 {
+    gpio_toggle(GPIOK, GPIO5);
     nvic_disable_irq(NVIC_EXTI1_IRQ);
 	my_delay_2();				
 	exti_disable_request(EXTI1);
@@ -423,6 +425,10 @@ static enum usbd_request_return_codes usb_control_gpio_request(
    if ((req->bmRequestType & 0x7F) != USB_REQ_TYPE_VENDOR)
      return 0;
 
+//    printf("brequest %d", req->bRequest);
+//   printf("windex %d", req->wIndex);
+//    printf("wvalue %d", req->wValue);
+    
    (*len) = 1;
    (*buf)[0] = 1; //success
 
@@ -641,9 +647,10 @@ static enum usbd_request_return_codes usb_control_gpio_request(
     }
     else if (req->wValue == 9)
      {
+     gpio_toggle(GPIOK, GPIO7);
      if ( req->wIndex == 1 ) {
         irqtype = IRQ_TYPE_NONE;
-        irq_none();
+//        irq_none();
      return USBD_REQ_HANDLED;
      }
      else if ( req->wIndex == 2 ) {
@@ -1106,8 +1113,8 @@ int ramtest(void) {
   uint16_t* sdramh = ( uint16_t* )0x60000000;
   uint8_t*  sdramb = ( uint8_t*  )0x60000000;
   printf( "RAM[0]: 0x%08lX (Uninitialized)\r\n", sdram[ 0 ] );
-//  sdram[ 0 ] = 0x01234567;
-//  sdram[ 1 ] = 0x89ABCDEF;
+  sdram[ 0 ] = 0x01234567;
+  sdram[ 1 ] = 0x89ABCDEF;
   printf( "RAM[0]: 0x%02X (Byte)\r\n", sdramb[ 0 ] );
   printf( "RAM[0]: 0x%04X (Halfword)\r\n", sdramh[ 0 ] );
   printf( "RAM[0]: 0x%08lX (Word)\r\n", sdram[ 0 ] );
@@ -1180,6 +1187,7 @@ int main(void)
 	gpio_set(GPIOK, GPIO7);
 	ramtest();
 	printplls();
+	
 	printf("spi2 clock freq  %ld \r\n", rcc_get_spi_clk_freq(SPI2));
     printf("qspi clock freq  %ld \r\n", rcc_get_qspi_clk_freq(RCC_QSPI));
 	printf("fmc clock freq  %ld \r\n", rcc_get_fmc_clk_freq(RCC_FMC));
@@ -1192,6 +1200,7 @@ int main(void)
 	gpio_clear(GPIOK, GPIO5);
     gpio_set(GPIOK, GPIO6);
 	gpio_set(GPIOK, GPIO7);
+	irq_pin_init();
 	while (1) {
 
 	;
@@ -1203,13 +1212,15 @@ int main(void)
 void exti1_isr(void)
 {
     // char buf2[64] __attribute__ ((aligned(4)));
+    printf("interrupt fired\r\n");
     uint8_t buft[4] = {3, 3, 3, 3};
 	exti_reset_request(EXTI1);
 //	usbd_ep_write_packet(usbd_device usbd_dev, 0x83, buf2, 64);
-if (irqfire == 1) {
+//if (irqfire == 1) {
     usbd_ep_write_packet(usbd_dev, 0x82, buft, 4);
-    }
+//    }
     exti_set_trigger(EXTI1, irqtype);
+    printf("end of exti isr\r\n");
 }
 
 

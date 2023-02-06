@@ -72,7 +72,7 @@ struct spi_tiny_usb {
 	struct gpio_chip chip; //this is our GPIO chip
 	bool gpio_init;
     bool    hwirq;
-    int                      gpio_irq_map[4];
+    int                      gpio_irq_map[5];
     struct usb_endpoint_descriptor *int_in_endpoint;
 	struct urb		*int_in_urb;		/* gpio irq urb */
 	unsigned char           *int_in_buf;	/* gpio irq rec buffer */
@@ -708,7 +708,7 @@ static int spi_tiny_usb_probe(struct usb_interface *interface,
    printk(KERN_INFO "priv->int_in_endpointAddr: %d \n", priv->int_in_endpointAddr);
    printk(KERN_INFO "priv->int_in_endpoint->bEndpointAddress: %d \n", priv->int_in_endpoint->bEndpointAddress);
    // allocate our urb for interrupt in 
-   if (noirq == 0) {
+//   if (noirq == 0) {
    priv->int_in_urb = usb_alloc_urb(0, GFP_KERNEL);
    //allocate the interrupt buffer to be used
    priv->int_in_buf = kmalloc(le16_to_cpu(priv->int_in_endpoint->wMaxPacketSize), GFP_KERNEL);
@@ -732,7 +732,7 @@ static int spi_tiny_usb_probe(struct usb_interface *interface,
      {
         printk(KERN_ALERT "Failed to submit urb \n");
      }
-    }   // noirq
+ //   }   // noirq
    /// gpio_chip struct info is inside KERNEL/include/linux/gpio/driver.h
    priv->chip.label = "vusb-gpio"; //name for diagnostics
 //   data->chip.priv = &data->usb_dev->priv; // optional privice providing the GPIOs
@@ -756,7 +756,7 @@ static int spi_tiny_usb_probe(struct usb_interface *interface,
    priv->chip.direction_output = _direction_output;
    priv->chip.to_irq = i2c_gpio_to_irq;
    priv->chip.names = gpio_names;
-   if (noirq == 0) {
+//   if (noirq == 0) {
    #if LINUX_VERSION_CODE <= KERNEL_VERSION(5,18,0)    
    priv->irq.name = "usbgpio-irq";
    priv->irq.irq_set_type = usbirq_irq_set_type;
@@ -782,7 +782,9 @@ static int spi_tiny_usb_probe(struct usb_interface *interface,
 	}
 	
 //   girq->irq_num = rc;
-	
+
+//} //end of noirq
+
    if (gpiochip_add(&priv->chip) < 0)
      {
         printk(KERN_ALERT "Failed to add gpio chip \n");
@@ -796,9 +798,11 @@ static int spi_tiny_usb_probe(struct usb_interface *interface,
 
 //   gpio_direction_input(5);
 //   gpio_export_link(data->chip, 3, BTN);
+
+//if (noirq == 0) {
    i2c_gpio_to_irq(&priv->chip, 4);
+//}  
    
-   } //end of noirq
    
    INIT_WORK(&priv->work, _gpio_work_job);
    INIT_WORK(&priv->work2, _gpio_work_job2);
@@ -867,7 +871,7 @@ static int spi_tiny_usb_probe(struct usb_interface *interface,
 	priv->master->dev.of_node = interface->dev.of_node;
 	priv->master->num_chipselect = 1;
 	priv->master->max_speed_hz = 100000000;
-	priv->master->min_speed_hz = 700000;
+	priv->master->min_speed_hz = 500000;
 	// priv->master->dev.platform_data = priv;
 	spi_master_set_devdata(priv->master, priv);
 
@@ -938,9 +942,9 @@ void spi_tiny_usb_gpio_remove(struct spi_tiny_usb *priv)
 	usb_free_urb(priv->int_in_urb);
 
 	gpiochip_remove(&priv->chip);
-	if (noirq == 0) {
+//	if (noirq == 0) {
 //	irq_free_desc(&priv->chip.irq);
-	}
+//	}
 }
 
 
