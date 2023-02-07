@@ -5,7 +5,6 @@
 #include <linux/slab.h>
 #include <linux/types.h>
 #include <linux/usb.h>
-#include <linux/gpio.h>
 #include <linux/spi/spi.h>
 #include <linux/delay.h>
 #include <linux/kref.h>
@@ -16,6 +15,7 @@
 #include <linux/workqueue.h> //for work_struct
 #include <linux/gpio.h> //for led
 #include <linux/gpio/driver.h>
+#include <linux/gpio/machine.h>
 #include <linux/irq.h>
 #include <linux/irqdomain.h>
 #include <linux/irqchip/chained_irq.h>
@@ -73,6 +73,7 @@ struct spi_tiny_usb {
 	bool gpio_init;
     bool    hwirq;
     int                      gpio_irq_map[5];
+    struct gpio_desc *interrupt_gpio;
     struct usb_endpoint_descriptor *int_in_endpoint;
 	struct urb		*int_in_urb;		/* gpio irq urb */
 	unsigned char           *int_in_buf;	/* gpio irq rec buffer */
@@ -133,6 +134,7 @@ int pdown = 0;
 int powdn = 0;
 int irqt = 2;
 int irqyup = 0;
+int edget = GPIO_ACTIVE_HIGH;
 
 static void
 _gpio_work_job(struct work_struct *work)
@@ -379,6 +381,7 @@ static int usbirq_irq_set_type(struct irq_data *irqd, unsigned type)
 		   usbval = 9;
            offs = 5;
            gpio_val = 9;
+           edget = GPIO_ACTIVE_LOW;
            schedule_work(&data->work);
 		break;
 	case IRQ_TYPE_EDGE_FALLING:
@@ -386,6 +389,7 @@ static int usbirq_irq_set_type(struct irq_data *irqd, unsigned type)
            offs = 6;
            gpio_val = 9;
            schedule_work(&data->work);
+           edget = GPIO_ACTIVE_HIGH;
 		break;
 	default:
 		return -EINVAL;
@@ -800,13 +804,35 @@ static int spi_tiny_usb_probe(struct usb_interface *interface,
         priv->gpio_init = true;
      }
 
+if (noirq == 0) {
+    priv->interrupt_gpio = gpiochip_request_own_desc(&priv->chip, 
+                                                4,
+                                                "IRQpk1",
+                                                GPIOD_IN,
+                                                edget);
+
+
+
+//    priv->interrupt_gpio = devm_gpiod_get(dev, "IRQpk1", GPIOD_IN);
+
+//    ret = devm_gpio_request_one(dev,  priv->chip.base + 4, GPIOD_IN, "IRQpk1");
+//		if (ret) {
+//			if (ret == -EPROBE_DEFER)
+//				pr_info("failed request one\n");
+//		}
+
+
 //   gpio_direction_input(5);
 //   gpio_export_link(data->chip, 3, BTN);
 
-if (noirq == 0) {
+
    i2c_gpio_to_irq(&priv->chip, 4);
-}  
+ 
+   gpiochip_free_own_desc(priv->interrupt_gpio);
    
+
+//    gpiochip_free_own_desc(priv->interrupt_gpio);
+}     
    
    INIT_WORK(&priv->work, _gpio_work_job);
    INIT_WORK(&priv->work2, _gpio_work_job2);
@@ -861,6 +887,10 @@ if (noirq == 0) {
 
 	dev_info(&interface->dev, "connected spi-tiny-usb device\n");
 
+if (noirq == 0) {		 
+     irq_set_irq_type(GPIO_irqNumber, irqt); 
+        }
+        
 	// SPI master
 	priv->last_bpw = 8;
 	priv->master = spi_alloc_master(&interface->dev, sizeof(*priv));
@@ -904,8 +934,8 @@ if (noirq == 0) {
 	dev_info(&interface->dev,
 		 "USBSPI device now attached to spidev%d.%d",
 		 interface->minor, priv->spiinfo.chip_select);
-		 
-  
+
+
  } //elseif inf 0
 
 	return 0;
@@ -946,7 +976,7 @@ void spi_tiny_usb_gpio_remove(struct spi_tiny_usb *priv)
 
 	usb_kill_urb(priv->int_in_urb);
 	usb_free_urb(priv->int_in_urb);
-
+    
 	gpiochip_remove(&priv->chip);
 //	if (noirq == 0) {
 //	irq_free_desc(&priv->chip.irq);
