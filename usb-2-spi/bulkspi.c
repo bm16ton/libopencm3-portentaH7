@@ -88,11 +88,21 @@ while( !( SPI_SR(spi) & SPI_SR_TXC));
 void upd_spi_div(int spihz);
 int is_first_closest(int hz);
 
-int nums[9] = {9999,4900,2400,1150,615,302,146,77,38};
+static int nums[9] = {9999,4900,2400,1150,615,302,146,77,38};
 
 int is_first_closest(int hz) {
+    int clock = rcc_get_spi_clk_freq(SPI2);
+    int divis = 2;
+    int ii = 0;
+    float result = 000000000;
+    for (divis = 2; divis < 513; divis = divis * 2) {
+    result = (clock / ((double)divis));
+    nums[ii] = ((result / 10000) - 1);
+    ii++;
+    }
     for (int i = 0; i < 9; ++i) {
         if (hz > nums[i]) {
+        printf("clock set to %d\r\n", (nums[i] * 10000));
             return i;
         }
     }
