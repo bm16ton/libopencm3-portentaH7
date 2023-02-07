@@ -102,7 +102,7 @@ int is_first_closest(int hz) {
     }
     for (int i = 0; i < 9; ++i) {
         if (hz > nums[i]) {
-        printf("clock set to %d\r\n", (nums[i] * 10000));
+        printf("clock set to %d\r\n", (nums[i]  + 1)* 10000);
             return i;
         }
     }
