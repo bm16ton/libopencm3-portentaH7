@@ -548,6 +548,9 @@ static int spi_tiny_usb_xfer_one(struct spi_master *master, struct spi_message *
 
         if (oldspihz != t->speed_hz) {
         printk("setting clock \r\n");
+        if ((t->speed_hz / 10000) > 9999) {
+        t->speed_hz = 99990000;
+        }
         wait = usb_write(priv, 67, (t->speed_hz / 10000), (t->speed_hz / 10000), NULL, 0);
            if (wait) {
            ;

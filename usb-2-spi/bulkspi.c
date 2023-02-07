@@ -97,12 +97,12 @@ int is_first_closest(int hz) {
     float result = 000000000;
     for (divis = 2; divis < 513; divis = divis * 2) {
     result = (clock / ((double)divis));
-    nums[ii] = ((result / 10000) - 1);
+    nums[ii] = ((result / 10000) - 2);
     ii++;
     }
     for (int i = 0; i < 9; ++i) {
         if (hz > nums[i]) {
-        printf("clock set to %d\r\n", (nums[i]  + 1)* 10000);
+        printf("clock set to %d\r\n", (nums[i]  + 2)* 10000);
             return i;
         }
     }
