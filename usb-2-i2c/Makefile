@@ -3,7 +3,7 @@ BUILD_DIR = bin
 
 ARCH_FLAGS = -mcpu=cortex-m7 -mthumb -mfpu=fpv5-sp-d16 -mfloat-abi=hard
 
-CFILES += cdcacm.c bulkspi.c
+CFILES += cdcacm.c util.c bitops.c regdump.c i2c_ctx.c
 
 DEVICE=stm32h747
 

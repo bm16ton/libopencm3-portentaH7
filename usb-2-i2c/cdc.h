@@ -10,7 +10,7 @@ void delay_ms( uint32_t ms );
 int sdramsetup( void );
 int ramtest(void);
 extern volatile uint32_t systick;
-void put_status(char *m);
+
 int _write(int file, char *ptr, int len);
 
 uint32_t SysTick_Config(uint32_t ticks);

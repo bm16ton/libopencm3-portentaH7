@@ -1,3 +1,5 @@
+UPDATE: added basic yet largly functional usb-2-spi (well and usb-2-gpio/irq) with kernel driver. It needs major cleanup all unusedd code removed, untested config options tested, the usb-2-i2c-adc etc added. Some of these things adc/spi maybe a great excuse for me to finally play around with compression on mcu usb device and kernel driver. Notro does it with GUD on pi pico https://github.com/notro/gud-pico (seriously follow Notro guy always does the coolest shit and seriously knows how to code. Anyway I wannna play with the compression stuff. Shit to remind myself Ill write it here...Add spi flash protocol stuff the kernel supports. 
+
 UPDATED LIST OF WHAT WORKS; USBHS, I2c, ADC, SPI, M4 BOOTING, EXTERNAL SDRAM, UART, RTC BACKUP REGISTERS/AUTOBOOT BOOTLOADER, CLOCK SET/GET I2C/QSPI/CRAP others I forgot. Seems like im forgetting something.
 
 UPDATE: can now boot m4 core, added functions;

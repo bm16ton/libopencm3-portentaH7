@@ -35,7 +35,7 @@
 #include <libopencm3/stm32/fsmc.h>
 #include <libopencm3/cm3/systick.h>
 #include <libopencm3/stm32/i2c.h>
-#include "st7789_stm32_spi.h"
+//#include "st7789_stm32_spi.h"
 #include <string.h>
 #include <errno.h>
 #include <stdio.h>
@@ -313,7 +313,7 @@ __asm( "NOP" );
 __asm( "NOP" );
 __asm( "NOP" );
 __asm( "NOP" );
-RTC_BKPXR(0) = 0xDF59;  //arduino also has DFU_MAGIC_SERIAL_ONLY_RESET   0xb0  curious not in mcuboot code
+RTC_BKPXR(0) = 0xDF59;  //arduino also has DFU_MAGIC_SERIAL_ONLY_RESET   0xb0  curious not in mcuboot code that i could see
 __asm( "NOP" );
 __asm( "NOP" );
 __asm( "NOP" );
@@ -355,9 +355,6 @@ scb_reset_system();
 	}
 	*/
 }
-
-
-
 
 static void usbgpio_output(int gpio)
 {
@@ -414,6 +411,10 @@ static void usbgpio_input(int gpio)
 
 	my_delay_1();
 }
+
+// When starting to learn coding I finally figured out how to send one number, but not receive so made
+// usb to led drivers etc, then filled in the rest of control packet over time and finally rec. But looking
+// at the following code you can see where and when I figured out the rest IE wValue, index,request
 
 static enum usbd_request_return_codes usb_control_gpio_request(
     usbd_device *usbd_dev, struct usb_setup_data *req, uint8_t **buf,
@@ -685,13 +686,9 @@ static enum usbd_request_return_codes usb_control_gpio_request(
    }
    
    return USBD_REQ_NEXT_CALLBACK;
-//     {
-//        (*buf)[0] = -1; // FAILURE
-//     }
- 
-//   return 1;
 }
 
+// TODO REALY NEED THAT USB-2-UART BEN!
 /*
 static enum usbd_request_return_codes cdcacm_control_request(usbd_device *usbd_dev,
 	struct usb_setup_data *req, uint8_t **buf, uint16_t *len,
@@ -876,6 +873,7 @@ rcc_clock_setup_pll(&pll_config);
 
 void printplls(void);
 
+//silly functions I added to check all plls, seems like this probly exists in lopencm3 but I didnt see it
 void printplls(void) {
 printf("pll1p = %ld\r\n", rcc_get_pll1_clock('p'));
 printf("pll1q = %ld\r\n", rcc_get_pll1_clock('q'));
@@ -999,6 +997,10 @@ void usbuart_send_stdout(const uint8_t *data, uint32_t len)
 	}
 }
 */
+
+//THIS and a few other functions from above and in i2c files need to be broken out as external
+//debug header
+
 void put_status(char *m)
 {
 	uint16_t stmp;
@@ -1042,7 +1044,7 @@ void put_status(char *m)
 	printf("\r\n");
 }
 
-
+//SDRAM CURRENTLY WORKS, THO I COULD NOT GET M4 TO WORK WITH IT
 int sdramsetup( void ) {
 	
 	uint32_t cr_tmp, tr_tmp; /* control, timing registers */
@@ -1121,6 +1123,7 @@ int sdramsetup( void ) {
   return 0;
 }	
 	
+//GOOD CANIDATE FOR THE DEBUG HEADER
 int ramtest(void) {
 	  // Test external RAM reads and writes.
   uint32_t* sdram  = ( uint32_t* )0x60000000;
@@ -1144,11 +1147,11 @@ int main(void)
 	SCB_VTOR = (uint32_t) 0x08040000;
     rcc_periph_clock_enable(RCC_GPIOH);
     rcc_periph_clock_enable(RCC_SYSCFG);
-    rcc_periph_clock_enable(RCC_HSEM);
+    rcc_periph_clock_enable(RCC_HSEM);   //MAINLY For booting M4
 	volatile int i;
     InitLdoAndPll();
-//    SCB_EnableICache();
-//	SCB_EnableDCache();
+//    SCB_EnableICache();  //can configure and enable
+//	SCB_EnableDCache();    //can enable no problem, but any config even known good working configs and everything locks
 	/* Enable clocks for LED & USART1. */
 	rcc_periph_clock_enable(RCC_GPIOA);
 	rcc_periph_clock_enable(RCC_GPIOB);

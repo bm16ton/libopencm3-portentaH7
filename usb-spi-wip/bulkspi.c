@@ -8,7 +8,7 @@
 #include <libopencm3/stm32/spi.h>
 #include <libopencm3/stm32/timer.h>
 #include <libopencm3/stm32/rcc.h>
-#include "st7789_stm32_spi.h"
+//#include "st7789_stm32_spi.h"
 #include <string.h>
 #include <errno.h>
 #include <stdio.h>
@@ -193,12 +193,11 @@ static enum usbd_request_return_codes spi_control_request(
         return USBD_REQ_HANDLED;
         
     case CMD_TXZEROS:
-//	    printf("CMD_TXZEROS len = %d\r\n", req->wValue);
 	    dest2[0] = 0x00;
-	    ST_CS_ACTIVE;
+	    gpio_clear(GPIOA, GPIO8);
 	    for (uint16_t i = 0; i < req->wValue; i++)
         {
-            ST_CS_ACTIVE;
+            gpio_clear(GPIOA, GPIO8);
             __asm__("nop");
 		    __asm__("nop");
 		    __asm__("nop");
@@ -219,7 +218,7 @@ static enum usbd_request_return_codes spi_control_request(
 		    __asm__("nop");
 		    __asm__("nop");
 		    __asm__("nop");
-		    ST_CS_IDLE;
+		    gpio_set(GPIOA, GPIO8);
 		    __asm__("nop");
 		    __asm__("nop");
 		    __asm__("nop");
@@ -227,7 +226,7 @@ static enum usbd_request_return_codes spi_control_request(
 		    __asm__("nop");
 		    __asm__("nop");
 	    }
-        ST_CS_IDLE;
+        gpio_set(GPIOA, GPIO8);
 		return USBD_REQ_HANDLED;
 
     case CMD_FRST_TX:
@@ -240,19 +239,16 @@ static enum usbd_request_return_codes spi_control_request(
         return USBD_REQ_HANDLED;
         
 	case CMD_RX:
-//        ST_CS_ACTIVE;
         ret = recspi_sendusb(usbd_dev, (uint16_t)req->wValue);
         if (ret) {
         ;
         }
-//	    ST_CS_IDLE;
 	    offset = 0;
 		return USBD_REQ_HANDLED;
 		
 	case SPION:
 		spi_enable(SPI2);
 	    SPI_CR1(SPI2) |= SPI_CR1_CSTART;
-//	    gpio_clear(GPIOA, GPIO8);
 	    printf("enabling spi\r\n");
 	    return USBD_REQ_HANDLED;
 
@@ -273,7 +269,6 @@ int recspi_sendusb(usbd_device *dev, uint16_t len) {
     uint8_t buf[BULK_EP_MAXPACKET + 1] __attribute__ ((aligned(2)));
 
     memcpy(buf, spibuf512, len);
-//    printf("recspi_sendusb len = %d\r\n", len);
     x = usbd_ep_write_packet(dev, 0x82, buf, len);
     if (x != BULK_EP_MAXPACKET) {
 	;
@@ -292,6 +287,7 @@ void spi_ss_out_cb(usbd_device *dev, uint8_t ep)
 	uint8_t *dest;
 	uint8_t tempy;
 	dest = buf;
+	
 	x = usbd_ep_read_packet(dev, ep, dest, BULK_EP_MAXPACKET);
     if (x) {
         ;
@@ -305,21 +301,12 @@ void spi_ss_out_cb(usbd_device *dev, uint8_t ep)
             my_spi_send8(SPI2, dest[i]);
             
             while (!(SPI_SR(SPI2) & SPI_SR_TXP)) {
-            ;
+                ;
             }
-//            spibuf512[i] = spi_read8(SPI2);
 		    spibuf512[i] = my_spi_flush(SPI2);
-//		    for (unsigned iii = 0; iii < 100; iii++)
-//            {
-//                __asm__("nop");
-//            }
-//            gpio_set(GPIOA, GPIO8);
-//	        if (SPI_SR(SPI2) & SPI_SR_RXWNE) {
-//		     spibuf512[i] = my_spi_flush(SPI2);		
-//		     }
-		      }
-		      }
-	    usbd_ep_nak_set(dev, ep, 0);
+		        }
+		     }
+	usbd_ep_nak_set(dev, ep, 0);
 
 }
 
@@ -344,6 +331,6 @@ void usbspi_set_config(usbd_device *dev, uint16_t wValue)
 			USB_REQ_TYPE_VENDOR,
 			USB_REQ_TYPE_TYPE,
 			spi_control_request);
-		/* Prime source for IN data. */
+		
 		spi_ss_in_cb(dev, 0x82);
 }

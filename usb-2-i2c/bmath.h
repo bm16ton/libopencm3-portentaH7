@@ -5,8 +5,6 @@
 #include <unistd.h>
 #include <string.h>
 
-#define div_round_up(n,d)   (((n) + (d) - 1) / (d))
-
 uint32_t MAP(uint32_t au32_IN, uint32_t au32_INmin, uint32_t au32_INmax, uint32_t au32_OUTmin, uint32_t au32_OUTmax)
 {
     return ((((au32_IN - au32_INmin)*(au32_OUTmax - au32_OUTmin))/(au32_INmax - au32_INmin)) + au32_OUTmin);

@@ -42,20 +42,39 @@ static struct {
 	.per.pclk4_mhz = RCC_HSI_BASE_FREQUENCY / HZ_PER_MHZ
 };
 
-/*
+
 void rcc_disable_pll(int pll_num) {
-if 
-	*RCC_CR &= ~(RCC_CR_PLL1ON);
-	while ((*RCC_CR & RCC_CR_PLL1RDY)) {
+if (pll_num == 1) {
+	RCC_CR &= ~(RCC_CR_PLL1ON);
+	while ((RCC_CR & RCC_CR_PLL1RDY));
 	} 
-	
-	
-	
-//  enable the main PLL
-	*RCC_CR |= (1 << 24 );
-	while (!(*RCC_CR & RCC_CR_PLL1RDY)) {
+if (pll_num == 2) {
+	RCC_CR &= ~(RCC_CR_PLL2ON);
+	while ((RCC_CR & RCC_CR_PLL2RDY));
+	} 	
+if (pll_num == 3) {
+	RCC_CR &= ~(RCC_CR_PLL3ON);
+	while ((RCC_CR & RCC_CR_PLL3RDY));
+	} 	
+}	
+
+    
+void rcc_enable_pll(int pll_num) {    
+if (pll_num == 1) {
+	RCC_CR |= (1 << 24 );
+	while (!(RCC_CR & RCC_CR_PLL1RDY));
 	}	
-*/
+if (pll_num == 2) {
+	RCC_CR |= (1 << 26 );
+	while (!(RCC_CR & RCC_CR_PLL2RDY));
+	}		
+if (pll_num == 2) {
+	RCC_CR |= (1 << 28 );
+	while (!(RCC_CR & RCC_CR_PLL3RDY));
+	}		
+}	
+	
+
 static void rcc_configure_pll(uint32_t clkin, const struct pll_config *config, int pll_num) {
 	/* Only concern ourselves with the PLL if the input clock is enabled. */
 	if (config->divm == 0 || pll_num < 1 || pll_num > 3) {
@@ -245,6 +264,43 @@ void rcc_clock_setup_pll(const struct rcc_pll_config *config) {
 	}
 }
 
+uint32_t rcc_get_pll1_clock(char pll_clk) {
+    if (pll_clk == 'p') {
+		return rcc_clock_tree.pll1.p_mhz * HZ_PER_MHZ;
+	} else if  (pll_clk == 'q') {
+		return rcc_clock_tree.pll1.q_mhz * HZ_PER_MHZ;
+	} else if (pll_clk == 'r') {
+		return rcc_clock_tree.pll1.r_mhz * HZ_PER_MHZ;
+	} else {
+		return 0U;
+	}
+}
+	
+uint32_t rcc_get_pll2_clock(char pll_clk) {
+    if (pll_clk == 'p') {
+		return rcc_clock_tree.pll2.p_mhz * HZ_PER_MHZ;
+	} else if  (pll_clk == 'q') {
+		return rcc_clock_tree.pll2.q_mhz * HZ_PER_MHZ;
+	} else if (pll_clk == 'r') {
+		return rcc_clock_tree.pll2.r_mhz * HZ_PER_MHZ;
+	} else {
+		return 0U;
+	}
+}
+	
+uint32_t rcc_get_pll3_clock(char pll_clk) {
+    if (pll_clk == 'p') {
+		return rcc_clock_tree.pll3.p_mhz * HZ_PER_MHZ;
+	} else if  (pll_clk == 'q') {
+		return rcc_clock_tree.pll3.q_mhz * HZ_PER_MHZ;
+	} else if (pll_clk == 'r') {
+		return rcc_clock_tree.pll3.r_mhz * HZ_PER_MHZ;
+	} else {
+		return 0U;
+	}
+}
+	
+		
 uint32_t rcc_get_bus_clk_freq(enum rcc_clock_source source) {
 	uint32_t clksel;
 	switch (source) {

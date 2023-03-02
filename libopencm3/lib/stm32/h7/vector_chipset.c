@@ -20,8 +20,13 @@
 
 #include <libopencm3/cm3/scb.h>
 
+
 static void pre_main(void)
 {
 	/* Enable access to Floating-Point coprocessor. */
 	SCB_CPACR |= SCB_CPACR_FULL * (SCB_CPACR_CP10 | SCB_CPACR_CP11);
+
+    
 }
+
+
