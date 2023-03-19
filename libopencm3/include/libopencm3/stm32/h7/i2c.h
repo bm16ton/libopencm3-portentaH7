@@ -30,8 +30,8 @@
 
 #ifndef LIBOPENCM3_I2C_H
 #define LIBOPENCM3_I2C_H
-
 #include <libopencm3/stm32/common/i2c_common_v2.h>
+BEGIN_DECLS
 void enable_i2c1_fmp(bool enable);
 void enable_i2c2_fmp(bool enable);
 void enable_i2c3_fmp(bool enable);
@@ -40,7 +40,8 @@ void enable_pb6_fmp(bool enable);
 void enable_pb7_fmp(bool enable);
 void enable_pb8_fmp(bool enable);
 void enable_pb9_fmp(bool enable);
-
+void enable_i2c_fmp_port(uint32_t i2c);
+END_DECLS
 
 #endif
 

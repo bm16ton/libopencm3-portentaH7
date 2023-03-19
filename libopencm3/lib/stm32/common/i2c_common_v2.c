@@ -317,8 +317,6 @@ void i2c_disable_ack(uint32_t i2c)
 	I2C_OAR1(i2c) &= ~I2C_OAR1_OA1EN_ENABLE;
 }
 
-
-
 bool i2c_nack(uint32_t i2c)
 {
 	return (I2C_ISR(i2c) & I2C_ISR_NACKF);
@@ -499,9 +497,26 @@ void i2c_set_speed(uint32_t i2c, enum i2c_speeds speed, uint32_t clock_megahz)
 {
 	int prescaler;
 	switch(speed) {
+#if defined(STM32H7)
 	case i2c_speed_fmp_1m:
-		/* FIXME - add support for this mode! */
+	    /* target 16Mhz input */
+	    if (clock_megahz == 16) {
+		prescaler = clock_megahz / 16 - 1;
+		i2c_set_prescaler(i2c, prescaler);
+		i2c_set_scl_low_period(i2c, 5-1);
+		i2c_set_scl_high_period(i2c, 3-1);
+		i2c_set_data_hold_time(i2c, 0);
+		i2c_set_data_setup_time(i2c, 3-1);
+		} else if (clock_megahz == 8) {
+		prescaler = clock_megahz / 8 - 1;
+		i2c_set_prescaler(i2c, prescaler);
+		i2c_set_scl_low_period(i2c, 7-1);
+		i2c_set_scl_high_period(i2c, 4-1);
+		i2c_set_data_hold_time(i2c, 0);
+		i2c_set_data_setup_time(i2c, 4-1);
+		}
 		break;
+#endif
 	case i2c_speed_fm_400k:
 		/* target 8Mhz input, so tpresc = 125ns */
 		prescaler = clock_megahz / 8 - 1;
