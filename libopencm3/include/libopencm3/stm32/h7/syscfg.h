@@ -73,7 +73,8 @@
 #define SYSCFG_UR4_BCM4_ADD1_SHIFT              0
 #define SYSCFG_UR4_BCM4_ADD1_MASK               0xFFFF
 //#define SYSCFG_CFGR_CM4L_SHIFT                  0
-//#define SYSCFG_CFGR_CM4L_MASK                   0x1 
+//#define SYSCFG_CFGR_CM4L_MASK                   0x1
+
 /**@}*/
 
 /** @defgroup syscfg_pwrcr PWRCR SYSCFG configuration register
@@ -81,6 +82,33 @@
  * @{*/
 #define SYSCFG_PWRCR_ODEN			BIT0
 /**@}*/
+/* fast mode plus masks */
+#define SYSCFG_PMCR_I2C1_FMP_SHIFT        0
+#define SYSCFG_PMCR_I2C1_FMP        (0x1 << SYSCFG_PMCR_I2C1_FMP_SHIFT)
+#define SYSCFG_PMCR_I2C2_FMP_SHIFT        1
+#define SYSCFG_PMCR_I2C2_FMP        (0x1 << SYSCFG_PMCR_I2C2_FMP_SHIFT)
+#define SYSCFG_PMCR_I2C3_FMP_SHIFT        2
+#define SYSCFG_PMCR_I2C3_FMP        (0x1 << SYSCFG_PMCR_I2C3_FMP_SHIFT)
+#define SYSCFG_PMCR_I2C4_FMP_SHIFT        3
+#define SYSCFG_PMCR_I2C4_FMP        (0x1 << SYSCFG_PMCR_I2C4_FMP_SHIFT)
+#define SYSCFG_PMCR_I2C_PB6_FMP_SHIFT     4
+#define SYSCFG_PMCR_I2C_PB6_FMP     (0x1 << SYSCFG_PMCR_I2C_PB6_FMP_SHIFT)
+#define SYSCFG_PMCR_I2C_PB7_FMP_SHIFT     5
+#define SYSCFG_PMCR_I2C_PB7_FMP     (0x1 << SYSCFG_PMCR_I2C_PB7_FMP_SHIFT)
+#define SYSCFG_PMCR_I2C_PB8_FMP_SHIFT     6
+#define SYSCFG_PMCR_I2C_PB8_FMP     (0x1 << SYSCFG_PMCR_I2C_PB8_FMP_SHIFT)
+#define SYSCFG_PMCR_I2C_PB9_FMP_SHIFT     7
+#define SYSCFG_PMCR_I2C_PB9_FMP     (0x1 << SYSCFG_PMCR_I2C_PB9_FMP_SHIFT)
+/* switches open masks*/
+#define SYSCFG_PMCR_PA0SO_SHIFT           24
+#define SYSCFG_PMCR_PA0SO           (0x1 << SYSCFG_PMCR_PA0SO_SHIFT)
+#define SYSCFG_PMCR_PA1SO_SHIFT           25
+#define SYSCFG_PMCR_PA1SO           (0x1 << SYSCFG_PMCR_PA1SO_SHIFT)
+#define SYSCFG_PMCR_PC2SO_SHIFT           26
+#define SYSCFG_PMCR_PC2SO           (0x1 << SYSCFG_PMCR_PC2SO_SHIFT)
+#define SYSCFG_PMCR_PC3SO_SHIFT           27
+#define SYSCFG_PMCR_PC3SO           (0x1 << SYSCFG_PMCR_PC3SO_SHIFT)
+
 void setcm4bootadd0(uint16_t bootadd);
 void setcm4bootadd1(uint16_t bootadd);
 uint16_t getcm4bootadd0(void);

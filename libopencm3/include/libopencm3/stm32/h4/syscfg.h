@@ -37,7 +37,7 @@
 /**@defgroup syscfg_registers SYSCFG Registers
 ￼  @{*/
 #define SYSCFG_PMCR				MMIO32(SYSCFG_BASE + 0x04)
-#define SYSCFG_EXTICR(i)			MMIO32(SYSCFG_BASE + 0x08 + (i)*4)
+#define SYSCFG_EXTICR(i)		MMIO32(SYSCFG_BASE + 0x08 + (i)*4)
 #define SYSCFG_EXTICR1			MMIO32(SYSCFG_BASE + 0x08)
 #define SYSCFG_EXTICR2			MMIO32(SYSCFG_BASE + 0x0C)
 #define SYSCFG_EXTICR3			MMIO32(SYSCFG_BASE + 0x10)
@@ -46,9 +46,9 @@
 #define SYSCFG_CCSR				MMIO32(SYSCFG_BASE + 0x20)
 #define SYSCFG_CCVR				MMIO32(SYSCFG_BASE + 0x24)
 #define SYSCFG_CCCR				MMIO32(SYSCFG_BASE + 0x28)
-#define SYSCFG_PWRCR				MMIO32(SYSCFG_BASE + 0x2C)
+#define SYSCFG_PWRCR			MMIO32(SYSCFG_BASE + 0x2C)
 #define SYSCFG_PKGR				MMIO32(SYSCFG_BASE + 0x124)
-#define SYSCFG_UR(n)      MMIO32(SYSCFG_BASE + 0x300 + (4 * (n)))
+#define SYSCFG_UR(n)      		MMIO32(SYSCFG_BASE + 0x300 + (4 * (n)))
 
 #define SYSCFG_EXTICR_FIELDSIZE		4
 /**@}*/
@@ -72,8 +72,7 @@
 #define SYSCFG_UR3_BCM4_ADD0_MASK               0xFFFF
 #define SYSCFG_UR4_BCM4_ADD1_SHIFT              0
 #define SYSCFG_UR4_BCM4_ADD1_MASK               0xFFFF
-//#define SYSCFG_CFGR_CM4L_SHIFT                  0
-//#define SYSCFG_CFGR_CM4L_MASK                   0x1 
+
 /**@}*/
 
 /** @defgroup syscfg_pwrcr PWRCR SYSCFG configuration register
@@ -81,6 +80,16 @@
  * @{*/
 #define SYSCFG_PWRCR_ODEN			BIT0
 /**@}*/
+/* switches open masks*/
+#define SYSCFG_PMCR_PA0SO_SHIFT           24
+#define SYSCFG_PMCR_PA0SO           (0x1 << SYSCFG_PMCR_PA0SO_SHIFT)
+#define SYSCFG_PMCR_PA1SO_SHIFT           25
+#define SYSCFG_PMCR_PA1SO           (0x1 << SYSCFG_PMCR_PA1SO_SHIFT)
+#define SYSCFG_PMCR_PC2SO_SHIFT           26
+#define SYSCFG_PMCR_PC2SO           (0x1UL << SYSCFG_PMCR_PC2SO_SHIFT)
+#define SYSCFG_PMCR_PC3SO_SHIFT           27
+#define SYSCFG_PMCR_PC3SO           (0x1UL << SYSCFG_PMCR_PC3SO_SHIFT)
+
 void setcm4bootadd0(uint16_t bootadd);
 void setcm4bootadd1(uint16_t bootadd);
 uint16_t getcm4bootadd0(void);

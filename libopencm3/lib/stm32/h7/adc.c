@@ -23,7 +23,7 @@
 
 #include <libopencm3/stm32/adc.h>
 #include <libopencm3/stm32/dbgmcu.h>
-
+#include <libopencm3/stm32/syscfg.h>
 /** @brief Set ADC clock source, mode, and boost
  *
  * The H7 ADC clock can be sourced either from the peripheral bus clock or from
@@ -136,3 +136,60 @@ void adc_disable_regulator(uint32_t adc)
 {
 	ADC_CR(adc) &= ~ADC_CR_ADVREGEN;
 }
+
+/* Connects switch between PA0 and PA0_C which has
+direct connection to ADC12_INN1/ADC12_INP0 not sure what isuues
+could arise from using PA0(ADC1_INP16)or
+PA0_C(ADC12_INN1/ADC12_INP0) as analog in with switch connected */
+void enable_pa0so(bool enable)
+{
+    if (enable == 1) {
+        SYSCFG_PMCR |= SYSCFG_PMCR_PA0SO;
+    }
+    if (enable == 0) {
+        SYSCFG_PMCR &= ~SYSCFG_PMCR_PA0SO;
+    }
+}
+
+/* Connects switch between PA1 and PA1_C which has
+direct connection to ADC12_INP1 not sure what isuues
+could arise from using PA1(ADC1_INN16/ADC1_INP17)or
+PA1_C(ADC12_INP1) as analog in with switch connected */
+void enable_pa1so(bool enable)
+{
+    if (enable == 1) {
+        SYSCFG_PMCR |= SYSCFG_PMCR_PA1SO;
+    }
+    if (enable == 0) {
+        SYSCFG_PMCR &= ~SYSCFG_PMCR_PA1SO;
+    }
+}
+
+/* Connects switch between PC2 and PC2_C which has
+direct connection to ADC3_INN1/ADC3_INP0 not sure what isuues
+could arise from using PC2(ADC123_INN11/ADC123_INP12 )or
+PC2_C(ADC3_INN1/ADC3_INP0) as analog in with switch connected */
+void enable_pc2so(bool enable)
+{
+    if (enable == 1) {
+        SYSCFG_PMCR |= SYSCFG_PMCR_PC2SO;
+    }
+    if (enable == 0) {
+        SYSCFG_PMCR &= ~SYSCFG_PMCR_PC2SO;
+    }
+}
+
+/* Connects switch between PC3 and PC3_C which has
+direct connection to ADC3_INP1 not sure what isuues
+could arise from using PC3(ADC12_INN12/ADC12_INP13 )or
+PC3_C(ADC3_INP1) as analog in with switch connected */
+void enable_pc3so(bool enable)
+{
+    if (enable == 1) {
+        SYSCFG_PMCR |= SYSCFG_PMCR_PC3SO;
+    }
+    if (enable == 0) {
+        SYSCFG_PMCR &= ~SYSCFG_PMCR_PC3SO;
+    }
+}
+

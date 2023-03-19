@@ -337,6 +337,11 @@ enum adc_ccr_ckmode {
 
 BEGIN_DECLS
 
+void enable_pa0so(bool enable);
+void enable_pa1so(bool enable);
+void enable_pc2so(bool enable);
+void enable_pc3so(bool enable);
+
 uint32_t adc_set_clock_param(uint32_t adc, enum adc_ccr_ckmode mode,
 			     enum adc_ccr_presc prescale);
 void adc_set_boost(uint32_t adc, uint32_t adc_clock_freq);
