@@ -499,6 +499,7 @@ void i2c_set_speed(uint32_t i2c, enum i2c_speeds speed, uint32_t clock_megahz)
 	switch(speed) {
 #if defined(STM32H7)
 	case i2c_speed_fmp_1m:
+	    enable_i2c_fmp_port(i2c);
 	    /* target 16Mhz input */
 	    if (clock_megahz == 16) {
 		prescaler = clock_megahz / 16 - 1;
