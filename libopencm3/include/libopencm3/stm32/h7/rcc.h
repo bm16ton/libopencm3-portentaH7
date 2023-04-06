@@ -135,7 +135,7 @@ LGPL License Terms @ref lgpl_license
 #define RCC_GCR_BOOT_C2_SHIFT                   3
 #define RCC_GCR_BOOT_C2_MASK                    0x8
 
-              
+
 /** @defgroup rcc_cfgr_values RCC_CFGR Values
  * @ingroup rcc_registers
 @{*/
@@ -191,6 +191,26 @@ LGPL License Terms @ref lgpl_license
 #define RCC_CFGR_SW_HSE           0x2
 #define RCC_CFGR_SW_PLL1          0x3
 /**@}*/
+
+/** @defgroup rcc_ahbenr_en RCC_AHBxENR enable values (full set)
+ *@{*/
+/** @defgroup rcc_ahb1enr_en RCC_AHB1ENR enable values
+@ingroup STM32H7xx_rcc_defines
+
+@{*/
+#define RCC_AHB1ENR_DMA1EN                 (1 << 0)
+#define RCC_AHB1ENR_DMA2EN                 (1 << 1)
+#define RCC_AHB1ENR_ADC12EN                (1 << 5)
+#define RCC_AHB1ENR_ARTEN                  (1 << 14)
+#define RCC_AHB1ENR_ETH1MACEN              (1 << 15)
+#define RCC_AHB1ENR_ETH1TXEN               (1 << 16)
+#define RCC_AHB1ENR_ETH1RXEN               (1 << 17)
+#define RCC_AHB1ENR_USB1OTGHSEN            (1 << 25)
+#define RCC_AHB1ENR_USB1OTGHSULPIEN        (1 << 26)
+#define RCC_AHB1ENR_USB2OTGFSEN            (1 << 27)
+#define RCC_AHB1ENR_USB2OTGFSULPIEN        (1 << 28)
+/**@}*/
+
 
 /** @defgroup rcc_d1cfgr_values RCC_D1CFGR Values
  * @ingroup rcc_registers
@@ -844,13 +864,13 @@ void rcc_set_fdcan_clksel(uint8_t clksel);
  * appropriate for the SPI1/2/3 peripherals, eg RCC_D2CCIP1R_SPI123_XXX
  * @sa rcc_set_peripheral_clk_sel for equivalent generic functionality
  */
- 
-void rcc_set_i2c123_clksel(uint8_t clksel); 
- 
+
+void rcc_set_i2c123_clksel(uint8_t clksel);
+
 void rcc_set_qspi_clksel(uint8_t clksel);
- 
+
 void rcc_set_fmc_clksel(uint8_t clksel);
- 
+
 void rcc_set_spi123_clksel(uint8_t clksel);
 
 /**

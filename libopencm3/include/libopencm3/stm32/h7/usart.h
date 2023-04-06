@@ -32,7 +32,7 @@
 #define LIBOPENCM3_USART_H
 
 #include <libopencm3/stm32/common/usart_common_fifos.h>
-
+#include <libopencm3/stm32/dma.h>
 /**@{*/
 /** @defgroup usart_reg_base USART register base addresses
  * Holds all the U(S)ART peripherals supported.
@@ -47,6 +47,7 @@
 #define UART7           UART7_BASE
 #define UART8           UART8_BASE
 /**@}*/
+
 
 BEGIN_DECLS
 
