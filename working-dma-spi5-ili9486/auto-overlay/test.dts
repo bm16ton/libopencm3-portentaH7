@@ -1,0 +1,22 @@
+// SPDX-License-Identifier: GPL-2.0
+/dts-v1/;
+/plugin/;
+
+
+/ {
+	fragment@0 {
+	    target-path = "/";
+        status = "okay";
+		__overlay__ {
+//			#address-cells = <0x1>;
+//			#size-cells = <0x1>;
+			spi-plat-usb {
+				compatible = "spi-plat-usb";
+				interrupts = <0x0 0x1d 0x4>;
+				gpio-controller;
+			};
+		};
+	};
+};
+
+
