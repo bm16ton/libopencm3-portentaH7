@@ -167,7 +167,7 @@ else
 endif
 
 clean:
-	rm -rf $(BUILD_DIR) 
+	rm -rf $(BUILD_DIR)
 
 .PHONY: all clean flash
 -include $(OBJS:.o=.d)

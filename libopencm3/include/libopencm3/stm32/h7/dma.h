@@ -193,6 +193,37 @@ LGPL License Terms @ref lgpl_license
 #define DMA1_CCR14			DMA1_CCR(DMA_CHANNEL14)
 #define DMA1_CCR15			DMA1_CCR(DMA_CHANNEL15)
 
+#define DMA_LISR3_TEIF            (1 << 3)
+#define DMA_LISR9_TEIF            (1 << 9)
+#define DMA_LISR19_TEIF           (1 << 19)
+#define DMA_LISR25_TEIF           (1 << 25)
+
+#define DMA_LISR0_CFEIF           (1 << 0)
+#define DMA_LISR6_CFEIF          (1 << 6)
+#define DMA_LISR16_CFEIF         (1 << 16)
+#define DMA_LISR22_CFEIF         (1 << 22)
+#define DMA_LISR(dma_base)     MMIO32((dma_base) + 0x0)
+#define DMA_LISR5_TCIE			(1 << 5)
+#define DMA_LISR5_TCIE_OFFSET        6U
+
+#define DMA_LISR11_TCIE			(1 << 11)
+#define DMA_LIFC511_TCIE_OFFSET        11U
+
+#define DMA_LISR21_TCIE			(1 << 21)
+#define DMA_LIFC521_TCIE_OFFSET        21U
+
+#define DMA_LISR27_TCIE			(1 << 27)
+#define DMA_LIFC527_TCIE_OFFSET        27U
+
+#define DMA_LISRC3_TEIF            (1 << 3)
+#define DMA_LISRC9_TEIF            (1 << 9)
+#define DMA_LISRC19_TEIF           (1 << 19)
+#define DMA_LISRC25_TEIF           (1 << 25)
+
+#define DMA_LISRC0_CFEIF           (1 << 0)
+#define DMA_LISRC6_CFEIF          (1 << 6)
+#define DMA_LISRC16_CFEIF         (1 << 16)
+#define DMA_LISRC22_CFEIF         (1 << 22)
 
 #define DMA_LIFCR(dma_base)     MMIO32((dma_base) + 0x08)
 #define DMA_LIFCR5_TCIE			(1 << 5)
@@ -212,11 +243,56 @@ LGPL License Terms @ref lgpl_license
 #define DMA_LIFCRC19_TEIF           (1 << 19)
 #define DMA_LIFCRC25_TEIF           (1 << 25)
 
-#define DMA_LIFCRC0_TEIF           (1 << 3)
-#define DMA_LIFCRC6_CFEIF          (1 << 3)
-#define DMA_LIFCRC16_CFEIF         (1 << 3)
-#define DMA_LIFCRC22_CFEIF         (1 << 3)
+#define DMA_LIFCRC0_CFEIF           (1 << 0)
+#define DMA_LIFCRC6_CFEIF          (1 << 6)
+#define DMA_LIFCRC16_CFEIF         (1 << 16)
+#define DMA_LIFCRC22_CFEIF         (1 << 22)
 
+#define DMA_HISR(dma_base)     MMIO32((dma_base) + 0x04)
+#define DMA_HISR5_TCIE			(1 << 5)
+#define DMA_HISR5_TCIE_OFFSET        6U
+
+#define DMA_HISR11_TCIE			(1 << 11)
+#define DMA_HISR11_TCIE_OFFSET        11U
+
+#define DMA_HISR21_TCIE			(1 << 21)
+#define DMA_HISR21_TCIE_OFFSET        21U
+
+#define DMA_HISR27_TCIE			(1 << 27)
+#define DMA_HISR27_TCIE_OFFSET        27U
+
+#define DMA_HISR3_TEIF            (1 << 3)
+#define DMA_HISR9_TEIF            (1 << 9)
+#define DMA_HISR19_TEIF           (1 << 19)
+#define DMA_HISR25_TEIF           (1 << 25)
+
+#define DMA_HISR0_CFEIF           (1 << 0)
+#define DMA_HISR6_CFEIF          (1 << 6)
+#define DMA_HISR16_CFEIF         (1 << 16)
+#define DMA_HISR22_CFEIF         (1 << 22)
+
+//#define DMA_HIFCR(dma_base)     MMIO32((dma_base) + 0x0c)
+#define DMA_HIFCR5_TCIE			(1 << 5)
+#define DMA_HIFCR5_TCIE_OFFSET        6U
+
+#define DMA_HIFCR11_TCIE			(1 << 11)
+#define DMA_HIFC511_TCIE_OFFSET        11U
+
+#define DMA_HIFCR21_TCIE			(1 << 21)
+#define DMA_HIFC521_TCIE_OFFSET        21U
+
+#define DMA_HIFCR27_TCIE			(1 << 27)
+#define DMA_HIFC527_TCIE_OFFSET        27U
+
+#define DMA_HIFCRC3_TEIF            (1 << 3)
+#define DMA_HIFCRC9_TEIF            (1 << 9)
+#define DMA_HIFCRC19_TEIF           (1 << 19)
+#define DMA_HIFCRC25_TEIF           (1 << 25)
+
+#define DMA_HIFCRC0_CFEIF           (1 << 0)
+#define DMA_HIFCRC6_CFEIF          (1 << 6)
+#define DMA_HIFCRC16_CFEIF         (1 << 16)
+#define DMA_HIFCRC22_CFEIF         (1 << 22)
 
 #define DMA_SxNDTR(dma_base, channel)	MMIO32((dma_base) + 0x14 + \
 					       (0x18 * ((channel))))
@@ -560,6 +636,14 @@ LGPL License Terms @ref lgpl_license
 
 /**@}*/
 
+
+
+
+#define DMA_SxFCR(dma_base, channel)	MMIO32((dma_base) + 0x24 + \
+					       (0x18 * ((channel))))
+
+#define DMA1_SxFCR			DMA_SxFCR(DMA1)
+#define DMA2_SxFCR			DMA_SxFCR(DMA2)
 /* --- DMA_SxFCR values ----------------------------------------------------- */
 /** @defgroup dma_sxfcr_values DMA_SxFCR values
 @{*/
@@ -575,7 +659,10 @@ LGPL License Terms @ref lgpl_license
 
 /** FTH[1:0]: FIFO threshold selection */
 #define DMA_SxFCR_FTH_MASK		(0x3 << 0)
-
+#define DMA_THRESHOLD_QUARTER        00
+#define DMA_THRESHOLD_HALF           01
+#define DMA_THRESHOLD_THREEQUARTER   00
+#define DMA_THRESHOLD_FULL           11
 /**@}*/
 
 /* DMA IDs dmamux1
@@ -745,8 +832,7 @@ LGPL License Terms @ref lgpl_license
 /** DMDIS: direct mode disable */
 #define DMA_SxFCR_DMDIS			(1 << 2)
 
-/** FTH[1:0]: FIFO threshold selection */
-#define DMA_SxFCR_FTH_MASK		(0x3 << 0)
+
 
 /**@}*/
 
@@ -784,6 +870,7 @@ void dma_stream_reset(uint32_t dma, uint8_t channel);
 void dma_set_priority(uint32_t dma, uint8_t channel, uint32_t prio);
 void dma_enable_memory_increment_mode(uint32_t dma, uint8_t channel);
 void dma_disable_peripheral_increment_mode(uint32_t dma, uint8_t channel);
+void dma_enable_peripheral_increment_mode(uint32_t dma, uint8_t channel);
 void dma_set_peripheral_address(uint32_t dma, uint8_t channel, uint32_t address);
 void dma_set_memory_address(uint32_t dma, uint8_t channel, uint32_t address);
 uint16_t dma_get_number_of_data(uint32_t dma, uint8_t channel);
@@ -793,6 +880,17 @@ void dma_set_number_of_data(uint32_t dma, uint8_t channel, uint32_t number);
 void dma_clear_interrupt_flags(uint32_t dma, uint8_t channel);
 void dma_enable_transfer_complete_interrupt(uint32_t dma, uint8_t channel);
 void dma_disable_transfer_complete_interrupt(uint32_t dma, uint8_t channel);
+void dma_enable_bufferable_transfers(uint32_t dma, uint8_t channel);
+void dma_disable_mburst(uint32_t dma, uint8_t channel);
+void dma_disable_pburst(uint32_t dma, uint8_t channel);
+void dma_enable_pburst(uint32_t dma, uint8_t channel);
+void dma_enable_mburst(uint32_t dma, uint8_t channel);
+void dma_set_as_flow_controller(uint32_t dma, uint8_t channel);
+void peripheral_set_as_flow_controller(uint32_t dma, uint8_t channel);
+void dma_enable_direct_mode(uint32_t dma, uint8_t channel);
+void dma_disable_direct_mode(uint32_t dma, uint8_t channel);
+void dma_set_fifo_threshold(uint32_t dma, uint8_t channel, uint8_t thresh);
+void dma_disable_memory_increment_mode(uint32_t dma, uint8_t channel);
 #endif
 /**@}*/
 

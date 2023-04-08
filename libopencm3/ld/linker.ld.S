@@ -144,7 +144,7 @@ SECTIONS
 		*(COMMON)
 		. = ALIGN(4);
 		_ebss = .;
-	} >ram
+	} >ram /*changed from just >>ram */
 
 #if defined(_CCM)
 	.ccm : {

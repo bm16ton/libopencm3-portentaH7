@@ -25,8 +25,49 @@ void dma_disable_transfer_complete_interrupt(uint32_t dma, uint8_t channel)
     DMA_SxCR(dma, channel) &= ~DMA_SxCR_TCIE;
 }
 
+void dma_disable_mburst(uint32_t dma, uint8_t channel)
+{
+    DMA_SxCR(dma, channel) &= ~DMA_SxCR_MBURST_MASK;
+}
+
+void dma_enable_mburst(uint32_t dma, uint8_t channel)
+{
+    DMA_SxCR(dma, channel) |= DMA_SxCR_MBURST_MASK;
+}
+
+void dma_disable_direct_mode(uint32_t dma, uint8_t channel)
+{
+    DMA_SxCR(dma, channel) |= DMA_SxFCR_DMDIS;
+}
+
+void dma_enable_direct_mode(uint32_t dma, uint8_t channel)
+{
+    DMA_SxCR(dma, channel) &= ~DMA_SxFCR_DMDIS;
+}
+
+void dma_set_as_flow_controller(uint32_t dma, uint8_t channel)
+{
+    DMA_SxCR(dma, channel)  &= ~DMA_SxCR_PFCTRL;
+}
+
+void peripheral_set_as_flow_controller(uint32_t dma, uint8_t channel)
+{
+    DMA_SxCR(dma, channel)  |= DMA_SxCR_PFCTRL;
+}
+
+void dma_disable_pburst(uint32_t dma, uint8_t channel)
+{
+    DMA_SxCR(dma, channel) &= ~DMA_SxCR_PBURST_MASK;
+}
+
+void dma_enable_pburst(uint32_t dma, uint8_t channel)
+{
+    DMA_SxCR(dma, channel) &= ~DMA_SxCR_PBURST_MASK;
+}
+
 void dma_clear_interrupt_flags(uint32_t dma, uint8_t channel)
 {
+(void)channel;
 	DMA_LIFCR(dma) |= DMA_LIFCR5_TCIE;
 	DMA_LIFCR(dma) |= DMA_LIFCR11_TCIE;
 	DMA_LIFCR(dma) |= DMA_LIFCR21_TCIE;
@@ -35,16 +76,32 @@ void dma_clear_interrupt_flags(uint32_t dma, uint8_t channel)
 	DMA_LIFCR(dma) |= DMA_LIFCRC9_TEIF;
 	DMA_LIFCR(dma) |= DMA_LIFCRC19_TEIF;
 	DMA_LIFCR(dma) |= DMA_LIFCRC25_TEIF;
-	DMA_LIFCR(dma) |= DMA_LIFCRC0_TEIF;
+	DMA_LIFCR(dma) |= DMA_LIFCRC0_CFEIF;
 	DMA_LIFCR(dma) |= DMA_LIFCRC6_CFEIF;
 	DMA_LIFCR(dma) |= DMA_LIFCRC16_CFEIF;
 	DMA_LIFCR(dma) |= DMA_LIFCRC22_CFEIF;
-
+	DMA_HIFCR(dma) |= DMA_HIFCR5_TCIE;
+	DMA_HIFCR(dma) |= DMA_HIFCR11_TCIE;
+	DMA_HIFCR(dma) |= DMA_HIFCR21_TCIE;
+	DMA_HIFCR(dma) |= DMA_HIFCR27_TCIE;
+	DMA_HIFCR(dma) |= DMA_HIFCRC3_TEIF;
+	DMA_HIFCR(dma) |= DMA_HIFCRC9_TEIF;
+	DMA_HIFCR(dma) |= DMA_HIFCRC19_TEIF;
+	DMA_HIFCR(dma) |= DMA_HIFCRC25_TEIF;
+	DMA_HIFCR(dma) |= DMA_HIFCRC0_CFEIF;
+	DMA_HIFCR(dma) |= DMA_HIFCRC6_CFEIF;
+	DMA_HIFCR(dma) |= DMA_HIFCRC16_CFEIF;
+	DMA_HIFCR(dma) |= DMA_HIFCRC22_CFEIF;
 }
 
 void dma_set_number_of_data(uint32_t dma, uint8_t channel, uint32_t number)
 {
 	DMA_SxNDTR(dma, channel) = number;
+}
+
+void dma_enable_bufferable_transfers(uint32_t dma, uint8_t channel)
+{
+	DMA_SxCR(dma, channel) |=  DMA_SxCR_TRBUFF;
 }
 
 void dma_enable_stream(uint32_t dma, uint8_t channel)
@@ -83,12 +140,27 @@ void dma_set_priority(uint32_t dma, uint8_t channel, uint32_t prio)
 	DMA_SxCR(dma, channel) |= prio;
 }
 
+void dma_set_fifo_threshold(uint32_t dma, uint8_t channel, uint8_t thresh)
+{
+	DMA_SxFCR(dma, channel) |= thresh;
+}
+
 void dma_enable_memory_increment_mode(uint32_t dma, uint8_t channel)
 {
 	DMA_SxCR(dma, channel) |= DMA_SxCR_MINC;
 }
 
+void dma_disable_memory_increment_mode(uint32_t dma, uint8_t channel)
+{
+	DMA_SxCR(dma, channel) |= DMA_SxCR_MINC;
+}
+
 void dma_disable_peripheral_increment_mode(uint32_t dma, uint8_t channel)
+{
+	DMA_SxCR(dma, channel) &= ~DMA_SxCR_PINC;
+}
+
+void dma_enable_peripheral_increment_mode(uint32_t dma, uint8_t channel)
 {
 	DMA_SxCR(dma, channel) &= ~DMA_SxCR_PINC;
 }
