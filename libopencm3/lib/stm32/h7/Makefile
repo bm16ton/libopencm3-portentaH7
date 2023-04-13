@@ -51,6 +51,7 @@ OBJS += rcc_common_all.o
 OBJS += rtc_common_l1f024.o
 OBJS += rng_common_v1.o
 OBJS += spi_common_v3.o
+OBJS += swpmi.o
 OBJS += syscfg.o
 OBJS += i2c_common_v2.o i2c.o
 OBJS += timer_common_all.o
