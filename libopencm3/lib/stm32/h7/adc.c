@@ -40,6 +40,34 @@
  *
  * @returns The total clock divisor, including revision specific division.
  */
+void adc_enable_dual_mode(uint32_t adc) {
+    ADC_CCR(adc) |= (ADC_CCR_DUAL_MASK << 0x00);
+}
+
+void adc_set_dual_mode_type(uint32_t adc, uint32_t type) {
+    ADC_CCR(adc) |= type;
+}
+
+void adc_set_dual_mode_data_format(uint32_t adc, uint32_t format) {
+    ADC_CCR(adc) |= format;
+}
+
+uint32_t adc_read_multi_master(uint32_t adc)
+{
+	return ADC_CDR(adc);
+}
+
+uint32_t adc_read_multi_slave(uint32_t adc)
+{
+	return ADC_CDR(adc) & ADC_CDR_SLAVE_OFFSET;
+}
+
+uint32_t adc_read_multi_32b(uint32_t adc)
+{
+	return ADC_CDR2(adc);
+}
+
+
 uint32_t adc_set_clock_param(uint32_t adc, enum adc_ccr_ckmode mode,
 		         enum adc_ccr_presc prescale)
 {
@@ -59,6 +87,12 @@ uint32_t adc_set_clock_param(uint32_t adc, enum adc_ccr_ckmode mode,
 	return div;
 }
 
+void adc_set_dma_dmngt_circ(uint32_t adc)
+{
+	ADC_CFGR1(adc) |= ADC_CFGR1_DMNGT_DMA_CIRC;
+//	ADC_CFGR1(adc) |= (0x1 << 0xb);
+
+}
 /** Set the boost parameter of the ADC which depends on the clock frequency and
  * silicon revision.
  * @param adc Peripheral of choice @ref adc_reg_base

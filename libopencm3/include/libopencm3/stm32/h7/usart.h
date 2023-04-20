@@ -50,7 +50,30 @@
 
 
 BEGIN_DECLS
-
+void usart_set_oversample_8(uint32_t usart);
+void usart_set_oversample_16(uint32_t usart);
+void usart_set_autobaud_mode(uint32_t usart, uint32_t abmode);
+void usart_enable_autobaud(uint32_t usart);
+void usart_disable_autobaud(uint32_t usart);
+void usart_enable_msb(uint32_t usart);
+void usart_enable_lsb(uint32_t usart);
+void usart_enable_binary_inversion(uint32_t usart);
+void usart_disable_binary_inversion(uint32_t usart);
+void usart_enable_tx_level_inversion(uint32_t usart);
+void usart_disable_tx_level_inversion(uint32_t usart);
+void usart_enable_rx_level_inversion(uint32_t usart);
+void usart_disable_rx_level_inversion(uint32_t usart);
+void usart_enable_swap_io_pins(uint32_t usart);
+void usart_disable_swap_io_pins(uint32_t usart);
+void usart_enable_lin_mode(uint32_t usart);
+void usart_disable_lin_mode(uint32_t usart);
+void usart_enable_lin_break_detection_int(uint32_t usart);
+void usart_disable_lin_break_detection_int(uint32_t usart);
+void usart_set_lin_break_detection_length_10(uint32_t usart);
+void usart_set_lin_break_detection_length_11(uint32_t usart);
+void usart_enable_irda_mode(uint32_t usart);
+void usart_disable_irda_mode(uint32_t usart);
+void usart_request_autobaud_next_rx(uint32_t usart);
 END_DECLS
 
 /**@}*/

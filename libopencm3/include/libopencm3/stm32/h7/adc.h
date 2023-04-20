@@ -71,6 +71,7 @@
 #define ADC3_CCR			ADC_CCR(ADC3)
 #define ADC3_CDR			ADC_CDR(ADC3)
 
+#define ADC_CDR2(adc)		MMIO32((adc) + 0x300 + 0x10)
 /* --- ADC_CR values not in common_v2.h or common_v2_multi.h ---------------- */
 /** @ingroup adc_cr
  * @{ */
@@ -112,6 +113,7 @@
 /** JQDIS: Injected queue disable */
 #define ADC_CFGR1_JQDIS			(1 << 31)
 
+//#define ADC_CFGR1_DMAEN ADC_CFGR1_DMNGT_DMA_ONCE
 /** EXTSEL[4:0]: External trigger selection for regular group */
 #define ADC_CFGR1_EXTSEL_SHIFT		5
 #define ADC_CFGR1_EXTSEL_MASK		(0x1f << ADC_CFGR1_EXTSEL_SHIFT)
@@ -130,9 +132,10 @@
 
 /** @defgroup adc_cfgr1_dmngt DMNGT[1:0] Data management configuration
  *@{*/
-#define ADC_CFGR1_DMNGT_DMA_NONE	(0x3 << 0)
-#define ADC_CFGR1_DMNGT_DMA_ONCE	(0x3 << 0)
-#define ADC_CFGR1_DMNGT_DFSDM		(0x3 << 0)
+
+#define ADC_CFGR1_DMNGT_DMA_NONE	(0x0 << 0)
+#define ADC_CFGR1_DMNGT_DMA_ONCE	(0x1 << 0)
+#define ADC_CFGR1_DMNGT_DFSDM		(0x2 << 0)
 #define ADC_CFGR1_DMNGT_DMA_CIRC	(0x3 << 0)
 #define ADC_CFGR1_DMNGT_MASK		(0x3 << 0)
 /**@}*/
@@ -308,7 +311,7 @@ enum adc_ccr_ckmode {
 
 /* DAMDF[1:0]: Dual ADC Mode Data Format */
 /* On other processors this is also known as ADC_CCR_MDMA */
-#define ADC_CCR_DAMDF_DISABLE		(0x0 << 14)
+#define ADC_CCR_DAMDF_NONE		(0x0 << 14)
 #define ADC_CCR_DAMDF_32_10_BIT		(0x2 << 14)
 #define ADC_CCR_DAMDF_8_BIT		(0x3 << 14)
 
@@ -322,9 +325,21 @@ enum adc_ccr_ckmode {
 #define ADC_CCR_DUAL_SHIFT		0
 #define ADC_CCR_DUAL_MASK		0x1F
 
+/* dual mode types */
+#define ADC_CCR_INDEPENDENT 		                (0x0 << 18)
+#define ADC_CCR_COMBINED_SIM_INJECTED		        (0x1 << 18)
+#define ADC_CCR_COMBINED_SIM_ALT_TRIG	            (0x2 << 18)
+#define ADC_CCR_COMBINED_INTERLEAVED_INJECTED		(0x3 << 18)
+#define ADC_CCR_INJECTED_SIM 		                (0x5 << 18)
+#define ADC_CCR_REGULAR_SIM 		                (0x6 << 18)
+#define ADC_CCR_INTERLEAVED 		                (0x7 << 18)
+#define ADC_CCR_ALT_TRIGGER 		                (0x8 << 18)
+
+
 /* --- ADC_CDR values ------------------------------------------------------- */
 /* Bits 31:16 RDATA_SLV[15:0]: Regular data of the slave ADC */
 /* Bits 15:0 RDATA_MST[15:0]: Regular data of the master ADC. */
+#define ADC_CDR_SLAVE_OFFSET    15U
 
 /** @defgroup adc_channel ADC Channel Numbers
  * @ingroup adc_defines
@@ -336,12 +351,17 @@ enum adc_ccr_ckmode {
 /**@}*/
 
 BEGIN_DECLS
-
+void adc_set_dual_mode_data_format(uint32_t adc, uint32_t format);
+void adc_enable_dual_mode(uint32_t adc);
+void adc_set_dual_mode_type(uint32_t adc, uint32_t type);
+uint32_t adc_read_multi_master(uint32_t adc);
+uint32_t adc_read_multi_slave(uint32_t adc);
+uint32_t adc_read_multi_32b(uint32_t adc);
 void enable_pa0so(bool enable);
 void enable_pa1so(bool enable);
 void enable_pc2so(bool enable);
 void enable_pc3so(bool enable);
-
+void adc_set_dma_dmngt_circ(uint32_t adc);
 uint32_t adc_set_clock_param(uint32_t adc, enum adc_ccr_ckmode mode,
 			     enum adc_ccr_presc prescale);
 void adc_set_boost(uint32_t adc, uint32_t adc_clock_freq);

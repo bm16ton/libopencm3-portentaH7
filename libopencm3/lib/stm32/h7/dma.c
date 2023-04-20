@@ -50,7 +50,7 @@ void dma_set_as_flow_controller(uint32_t dma, uint8_t channel)
     DMA_SxCR(dma, channel)  &= ~DMA_SxCR_PFCTRL;
 }
 
-void peripheral_set_as_flow_controller(uint32_t dma, uint8_t channel)
+void dma_peripheral_set_as_flow_controller(uint32_t dma, uint8_t channel)
 {
     DMA_SxCR(dma, channel)  |= DMA_SxCR_PFCTRL;
 }
@@ -132,12 +132,6 @@ void dma_set_peripheral_address(uint32_t dma, uint8_t channel, uint32_t address)
 	if (!(DMA_SxCR(dma, channel) & DMA_SxCR_EN)) {
 		DMA_SPAR(dma, channel) = (uint32_t) address;
 	}
-}
-
-void dma_set_priority(uint32_t dma, uint8_t channel, uint32_t prio)
-{
-	DMA_SxCR(dma, channel) &= ~(DMA_SxCR_PL_MASK);
-	DMA_SxCR(dma, channel) |= prio;
 }
 
 void dma_set_fifo_threshold(uint32_t dma, uint8_t channel, uint8_t thresh)
@@ -229,12 +223,14 @@ void dma_pinc_disable(int dma, int channel) {
 DMA_SxCR(dma, channel) &= ~DMA_SxCR_PINC_OFFSET;
 }
 
-void dma_circ_disable(int dma, int channel) {
-DMA_SxCR(dma, channel) &= ~DMA_SxCR_CIRC_OFFSET;
+void dma_circ_disable(int dma, int stream) {
+DMA_SxCR(dma, stream) &= ~DMA_SxCR_CIRC_OFFSET;
 }
 
-void dma_circ_enable(int dma, int channel) {
-DMA_SxCR(dma, channel) |= DMA_SxCR_CIRC;
+void dma_circ_enable(int dma, int stream, uint32_t direction) {
+uint32_t reg32 = (DMA_SxCR(dma, stream) & ~DMA_SxCR_DIR_MASK);
+reg32 |= DMA_SxCR_CIRC;
+DMA_SxCR(dma, stream) = (reg32 | direction);
 }
 
 // sourrce = sxpar   dest = moar
