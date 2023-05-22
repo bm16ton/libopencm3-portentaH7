@@ -74,7 +74,11 @@ void usart_set_lin_break_detection_length_11(uint32_t usart);
 void usart_enable_irda_mode(uint32_t usart);
 void usart_disable_irda_mode(uint32_t usart);
 void usart_request_autobaud_next_rx(uint32_t usart);
+//void usart_enable_idle_interrupt(uint32_t usart);
+void usart_clear_idle_interrupt(uint32_t usart);
+void usart_clear_interrupt_flags_all(uint32_t usart);
 END_DECLS
+
 
 /**@}*/
 

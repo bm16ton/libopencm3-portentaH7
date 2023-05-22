@@ -73,7 +73,7 @@ rcc_periph_clock_enable(RCC_OTGHSULPI);
     OTG_HS_GCCFG &= ~OTG_GCCFG_PWRDWN;
 
 	OTG_HS_GUSBCFG &= ~OTG_GUSBCFG_PHYSEL;
-	
+
 
     OTG_HS_DCFG = OTG_DCFG_DSPD & ~OTG_DCFG_DSPD | 0x0;
 
@@ -95,12 +95,12 @@ rcc_periph_clock_enable(RCC_OTGHSULPI);
 
 	/* Force peripheral only mode. */
     OTG_HS_GUSBCFG |= OTG_GUSBCFG_FDMOD | OTG_GUSBCFG_TRDT_MASK;  //why did i add this again?? probly lack of sleep will checkout later
-    
+
     OTG_HS_GINTSTS |= OTG_GINTSTS_MMIS;
 
 	/* Restart the PHY clock. */
     OTG_HS_PCGCCTL |= 0;
-    
+
 	OTG_HS_GRXFSIZ = stm32f207_usb_driver.rx_fifo_size;
 	usbd_dev.fifo_mem_top = stm32f207_usb_driver.rx_fifo_size;
 

@@ -9,7 +9,16 @@ void usart_set_oversample_16(uint32_t usart)
 {
 	USART_CR1(usart) &= ~USART_CR1_OVER8;
 }
-
+/*
+void usart_enable_idle_interrupt(uint32_t usart)
+{
+	USART_CR1(usart) |= USART_CR1_IDLEIE;
+}
+*/
+void usart_clear_idle_interrupt(uint32_t usart)
+{
+USART_ICR(usart) |= USART_ICR_IDLECF;
+}
 
 /*
 #define USART_CR2_ABRMOD_STARTBIT	(0x0 << USART_CR2_ABRMOD_SHIFT)
@@ -149,3 +158,19 @@ void usart_request_autobaud_next_rx(uint32_t usart)
 
 	USART_RQR(usart) |= USART_RQR_ABRRQ;
 }
+
+void usart_clear_interrupt_flags_all(uint32_t usart)
+{
+
+  	USART_ICR(usart) |= USART_ICR_CTSCF;
+	USART_ICR(usart) |= USART_ICR_EOBCF;
+	USART_ICR(usart) |= USART_ICR_RTOCF;
+	USART_ICR(usart) |= USART_ICR_TCCF;
+	USART_ICR(usart) |= USART_ICR_IDLECF;
+	USART_ICR(usart) |= USART_ICR_ORECF;
+	USART_ICR(usart) |= USART_ICR_NCF;
+	USART_ICR(usart) |= USART_ICR_FECF;
+	USART_ICR(usart) |= USART_ICR_PECF;
+
+}
+

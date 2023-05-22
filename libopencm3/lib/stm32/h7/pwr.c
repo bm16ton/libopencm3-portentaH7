@@ -79,6 +79,24 @@ void pwr_set_mode_scu_bypass(void) {
 	PWR_CR3 = (PWR_CR3 & ~cr3_mask) | (PWR_CR3_SCUEN | PWR_CR3_BYPASS);
 }
 
+/** Disable Backup Domain Write Protection
+ *
+ * This allows backup domain registers to be changed. These registers are write
+ * protected after a reset.
+ */
+void pwr_disable_backup_domain_write_protect(void)
+{
+	PWR_CR1 |= PWR_CR1_DBP;
+}
+
+/** Re-enable Backup Domain Write Protection
+ *
+ * This protects backup domain registers from inadvertent change.
+ */
+void pwr_enable_backup_domain_write_protect(void)
+{
+	PWR_CR1 &= ~PWR_CR1_DBP;
+}
 
 void pwr_set_mode(enum pwr_sys_mode mode, uint8_t smps_level) {
 	switch (mode) {

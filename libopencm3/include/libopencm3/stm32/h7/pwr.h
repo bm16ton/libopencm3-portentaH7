@@ -245,6 +245,10 @@ void pwr_set_svos_scale(enum pwr_svos_scale scale);
  * @param[in] scale  Voltage scale value to set.
  */
 void pwr_set_vos_scale(enum pwr_vos_scale scale);
+
+void pwr_disable_backup_domain_write_protect(void);
+
+void pwr_enable_backup_domain_write_protect(void);
 /**@}*/
 
 
