@@ -51,6 +51,12 @@
 #define MPU_RNR				MMIO32(MPU_BASE + 0x08) /**< See also \ref CM3_mpu_rnr */
 #define MPU_RBAR			MMIO32(MPU_BASE + 0x0C) /**< See also \ref CM3_mpu_rbar */
 #define MPU_RASR			MMIO32(MPU_BASE + 0x10) /**< See also \ref CM3_mpu_rasr */
+#define MPU_RBAR_A1        MMIO32(MPU_BASE + 0x014)
+#define MPU_RASR_A1        MMIO32(MPU_BASE + 0x018)
+#define MPU_RBAR_A2        MMIO32(MPU_BASE + 0x01C)
+#define MPU_RASR_A2       MMIO32(MPU_BASE + 0x020)
+#define MPU_RBAR_A3        MMIO32(MPU_BASE + 0x024)
+#define MPU_RASR_A3        MMIO32(MPU_BASE + 0x028)
 /**@}*/
 
 /* --- MPU values ---------------------------------------------------------- */

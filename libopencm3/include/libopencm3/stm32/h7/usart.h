@@ -48,6 +48,7 @@
 #define UART8           UART8_BASE
 /**@}*/
 
+#define USART_ICR_TCBGTCF			(1 << 7)
 
 BEGIN_DECLS
 void usart_set_oversample_8(uint32_t usart);

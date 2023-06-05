@@ -161,7 +161,6 @@ void usart_request_autobaud_next_rx(uint32_t usart)
 
 void usart_clear_interrupt_flags_all(uint32_t usart)
 {
-
   	USART_ICR(usart) |= USART_ICR_CTSCF;
 	USART_ICR(usart) |= USART_ICR_EOBCF;
 	USART_ICR(usart) |= USART_ICR_RTOCF;
@@ -171,6 +170,8 @@ void usart_clear_interrupt_flags_all(uint32_t usart)
 	USART_ICR(usart) |= USART_ICR_NCF;
 	USART_ICR(usart) |= USART_ICR_FECF;
 	USART_ICR(usart) |= USART_ICR_PECF;
-
+	USART_ICR(usart) |= USART_ICR_TCCF;
+	USART_ICR(usart) |= USART_ICR_TCBGTCF;
+	USART_ICR(usart) |= USART_ICR_TXFECF;
 }
 

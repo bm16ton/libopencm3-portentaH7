@@ -114,6 +114,15 @@ uint16_t dma_get_number_of_data(uint32_t dma, uint8_t channel)
 	return DMA_SxNDTR(dma, channel);
 }
 
+uint16_t dma_get_current_target(uint32_t dma, uint8_t channel)
+{
+	if (DMA_SxCR(dma, channel) & DMA_SxCR_CT) {
+	return 1;
+	} else {
+	return 0;
+	}
+}
+
 void dma_disable_stream(uint32_t dma, uint8_t channel)
 {
 	DMA_SxCR(dma, channel) &= ~DMA_SxCR_EN;
@@ -126,6 +135,12 @@ void dma_set_memory_address(uint32_t dma, uint8_t channel, uint32_t address)
 	}
 }
 
+void dma_set_memory_address2(uint32_t dma, uint8_t channel, uint32_t address)
+{
+	if (!(DMA_SxCR(dma, channel) & DMA_SxCR_EN)) {
+		DMA_SM1AR(dma, channel) = (uint32_t) address;
+	}
+}
 
 void dma_set_peripheral_address(uint32_t dma, uint8_t channel, uint32_t address)
 {

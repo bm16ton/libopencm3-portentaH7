@@ -872,6 +872,7 @@ void dma_disable_peripheral_increment_mode(uint32_t dma, uint8_t channel);
 void dma_enable_peripheral_increment_mode(uint32_t dma, uint8_t channel);
 void dma_set_peripheral_address(uint32_t dma, uint8_t channel, uint32_t address);
 void dma_set_memory_address(uint32_t dma, uint8_t channel, uint32_t address);
+void dma_set_memory_address2(uint32_t dma, uint8_t channel, uint32_t address);
 uint16_t dma_get_number_of_data(uint32_t dma, uint8_t channel);
 void dma_enable_stream(uint32_t dma, uint8_t channel);
 void dma_disable_stream(uint32_t dma, uint8_t channel);
@@ -890,6 +891,7 @@ void dma_enable_direct_mode(uint32_t dma, uint8_t channel);
 void dma_disable_direct_mode(uint32_t dma, uint8_t channel);
 void dma_set_fifo_threshold(uint32_t dma, uint8_t channel, uint8_t thresh);
 void dma_disable_memory_increment_mode(uint32_t dma, uint8_t channel);
+uint16_t dma_get_current_target(uint32_t dma, uint8_t channel);
 #endif
 /**@}*/
 
