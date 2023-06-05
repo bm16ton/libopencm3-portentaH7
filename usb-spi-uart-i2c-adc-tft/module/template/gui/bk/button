@@ -1,0 +1,91 @@
+#!/bin/sh
+
+[ -z $GTKDIALOG ] && GTKDIALOG=gtkdialog
+
+IMAGEFILE="`find /usr/share/pixmaps -maxdepth 1 -type f | head -1`"
+
+MAIN_DIALOG='
+<window>
+	<vbox>
+	<hbox>
+	<vbox>
+	    <text>
+	    <label>"modalias"</label>
+	    </text>
+	</vbox>
+	<vbox>
+		<comboboxentry width-request="260">
+			<variable>ENTRY</variable>
+			<item>spi-petra</item>
+		</comboboxentry>
+	</vbox>
+	</hbox>
+	<hbox>
+	<vbox>
+	    <text>
+	    <label>"SPI mode"</label>
+	    </text>
+	</vbox>
+	<vbox>
+		<comboboxentry width-request="260">
+			<variable>ENTRY2</variable>
+			<item>SPI_MODE_0</item>
+			<item>SPI_MODE_1</item>
+			<item>SPI_MODE_2</item>
+			<item>SPI_MODE_3</item>
+		</comboboxentry>
+	</vbox>
+	</hbox>
+	<hbox>
+	<vbox>
+	    <text>
+	    <label>"max speed"</label>
+	    </text>
+	</vbox>
+	<vbox>
+		<comboboxentry width-request="260">
+			<variable>ENTRY3</variable>
+			<item>30000000</item>
+		</comboboxentry>
+	</vbox>
+	</hbox>
+	<hbox>
+	<vbox>
+	    <text>
+	    <label>"cable select pin"</label>
+	    </text>
+	</vbox>
+	<vbox>
+		<comboboxentry width-request="260">
+			<variable>ENTRY4</variable>
+			<item>0</item>
+			<item>1</item>
+			<item>2</item>
+			<item>3</item>
+		</comboboxentry>
+	</vbox>
+	</hbox>
+		<hbox>
+			<button ok>
+				<action>echo You pressed the OK button.</action>
+			</button>
+			<button cancel>
+				<action>echo You pressed the Cancel button.</action>
+			</button>
+			<button help>
+				<action>echo You pressed the Help button.</action>
+			</button>
+		</hbox>
+		<hbox>
+			<button ok></button>
+			<button cancel></button>
+		</hbox>
+	</vbox>
+</window>
+'
+export MAIN_DIALOG
+
+case $1 in
+	-d | --dump) echo "$MAIN_DIALOG" ;;
+	*) $GTKDIALOG --program=MAIN_DIALOG ;;
+esac

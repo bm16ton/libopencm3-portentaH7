@@ -1,0 +1,6 @@
+If including in tree probly should add at least these plus gpio etc
+
+	depends on USB
+	select GENERIC_IRQ_CHIP
+	select OF
+	select OF_OVERLAY

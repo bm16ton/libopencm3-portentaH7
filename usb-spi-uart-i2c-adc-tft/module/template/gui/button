@@ -1,0 +1,132 @@
+#!/bin/sh
+
+[ -z $GTKDIALOG ] && GTKDIALOG=gtkdialog
+
+IMAGEFILE="`find /usr/share/pixmaps -maxdepth 1 -type f | head -1`"
+
+TMPDIR=/tmp/gtkdialog/examples/"`basename $0`"
+mkdir -p "$TMPDIR"
+
+ediWidth=150; ediHeight=75; gap=25
+
+funcbtnCreate() {
+	echo '<button image-position="'$2'">
+			<label>"'"$3"'"</label>
+			<input file stock="'$4'"></input>
+			<action>echo "'"$5"' '$1'"</action>
+			<action function="'"$3"'">'$1'</action>
+		</button>'
+}
+
+funcediCreate() {
+	echo '<variable>'$1'</variable>
+			<width>'$2'</width>
+			<height>'$3'</height>'
+	if [ $4 = 1 ]; then
+		echo '<input file>'"$TMPDIR"'/inoutfile</input>
+			<action signal="show">refresh:'$1'</action>'
+	fi
+	echo '</edit>'
+	if [ $5 = 1 ]; then echo '<vseparator></vseparator>'; fi
+}
+
+echo > "$TMPDIR"/inoutfile
+MAIN_DIALOG='
+<window>
+	<vbox>
+	<hbox>
+	<vbox>
+	    <text>
+	    <label>"modalias"</label>
+	    </text>
+	</vbox>
+	<vbox>
+		<comboboxentry width-request="260">
+			<variable>ENTRY</variable>
+			<item>spi-petra</item>
+		</comboboxentry>
+	</vbox>
+	</hbox>
+	<hbox>
+	<vbox>
+	    <text>
+	    <label>"SPI mode"</label>
+	    </text>
+	</vbox>
+	<vbox>
+		<comboboxentry width-request="260">
+			<variable>ENTRY2</variable>
+			<item>SPI_MODE_0</item>
+			<item>SPI_MODE_1</item>
+			<item>SPI_MODE_2</item>
+			<item>SPI_MODE_3</item>
+		</comboboxentry>
+	</vbox>
+	</hbox>
+	<hbox>
+	<vbox>
+	    <text>
+	    <label>"max speed"</label>
+	    </text>
+	</vbox>
+	<vbox>
+		<comboboxentry width-request="260">
+			<variable>ENTRY3</variable>
+			<item>30000000</item>
+		</comboboxentry>
+	</vbox>
+	</hbox>
+	<hbox>
+	<vbox>
+	    <text>
+	    <label>"cable select pin"</label>
+	    </text>
+	</vbox>
+	<vbox>
+		<comboboxentry width-request="260">
+			<variable>ENTRY4</variable>
+			<item>0</item>
+			<item>1</item>
+			<item>2</item>
+			<item>3</item>
+		</comboboxentry>
+	</vbox>
+	</hbox>
+		<hseparator></hseparator>
+		<hbox spacing="10">
+			<edit>
+				<action signal="show">echo "Type something here and press some buttons." > '"$TMPDIR"'/inoutfile</action>
+				<output file>'"$TMPDIR"'/inoutfile</output>
+				'"`funcediCreate edi15 $ediWidth $ediHeight 1 0`"'
+		</hbox>
+		<hbox spacing="32">
+			'"`funcbtnCreate edi15 0 Clear gtk-clear Clearing`"'
+			'"`funcbtnCreate edi15 0 Removeselected gtk-delete Deleting`"'
+			'"`funcbtnCreate edi15 0 Refresh gtk-refresh Refreshing`"'
+			'"`funcbtnCreate edi15 0 Save gtk-save Saving`"'
+		</hbox>
+		<hseparator></hseparator>
+		<hbox>
+			<button ok>
+				<action>echo You pressed the OK button.</action>
+			</button>
+			<button cancel>
+				<action>echo You pressed the Cancel button.</action>
+			</button>
+			<button help>
+				<action>echo You pressed the Help button.</action>
+			</button>
+		</hbox>
+		<hbox>
+			<button ok></button>
+			<button cancel></button>
+		</hbox>
+	</vbox>
+</window>
+'
+export MAIN_DIALOG
+
+case $1 in
+	-d | --dump) echo "$MAIN_DIALOG" ;;
+	*) $GTKDIALOG --program=MAIN_DIALOG ;;
+esac

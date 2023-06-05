@@ -1,0 +1,33 @@
+static const struct software_node generic_node = {
+	.properties = generic_properties,
+};
+
+static const struct usbspi_dev_data usb_spi_dev_data[] = {
+	{
+	 .magic = USBSPI_IO_DESC_MAGIC,
+	 .desc = usb_spi_bus_dev_io,
+	 .desc_len = ARRAY_SIZE (usb_spi_bus_dev_io),
+	 },
+};
+
+static struct spi_board_info usb_spi_bus_info[] = {
+	{
+      .modalias = "bivar1",
+	 .mode = bivar2,
+	 .max_speed_hz = bivar3,
+	 .bus_num = 0,
+	 .chip_select = bivar4,
+	 .platform_data = usb_spi_dev_data,
+	 .swnode = &generic_node,
+	 },
+/*
+   {
+    .modalias	= "spi-petra",    //use instead of spidev for spidev no-longer enumerates
+    .mode		= SPI_MODE_0,
+    .max_speed_hz	= 30000000,
+    .bus_num	= 0,
+    .chip_select	= 4, // GPIOH0 at ACBUS0
+    },
+*/
+};
+

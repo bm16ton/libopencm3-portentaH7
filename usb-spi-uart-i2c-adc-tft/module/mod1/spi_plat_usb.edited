@@ -1,0 +1,756 @@
+#include <linux/bits.h>
+#include <linux/delay.h>
+#include <linux/kernel.h>
+#include <linux/version.h>
+
+#include <linux/module.h>
+#include <linux/gpio/consumer.h>
+#include <linux/gpio/machine.h>
+#include <linux/platform_device.h>
+#include <linux/printk.h>
+#include <linux/idr.h>
+#include <linux/mutex.h>
+#include <linux/device.h>
+#include <linux/kobject.h>
+#include <linux/uaccess.h>
+#include <linux/slab.h>
+#include <linux/spi/spi.h>
+#include <linux/types.h>
+#include <linux/sizes.h>
+#include <linux/usb.h>
+#include "../inc/spi-tiny-usb.h"
+#include <linux/of_address.h>
+#include <linux/of_gpio.h>
+#include <linux/of.h>
+#include <linux/of_gpio.h>
+#include <linux/stringify.h>
+#include <linux/property.h>
+
+#define FLAGS_BEGIN 1
+#define FLAGS_END   2
+
+extern unsigned int GPIO_irqNumber;
+
+struct spi_tiny_device
+{
+
+	struct platform_device *pdev;
+	struct usb_interface *intf;
+	struct spi_controller *master;
+	const struct usbspi_intf_ops *iops;
+	struct gpiod_lookup_table *lookup[5];
+	struct gpio_desc **cs_gpios;
+
+	u8 xfer_txbuf[SZ_512K];
+	u8 xfer_rxbuf[SZ_512K];
+	u16 last_mode;		//used to compare old/new spi modes if diff update controller
+	u32 last_speed_hz;	// same as above but for spi speed
+	u16 last_bpw;		// same as two above but for bits per word
+	u16 oldlsb;		// same same for msb/lsb
+	int oldspihz;
+	int csmode;
+	int csnum;
+};
+
+u16 i2cspeed = 400;
+
+static ssize_t i2cspeed_store(struct device *dev,
+				   struct device_attribute *attr,
+				   const char *buf, size_t count)
+{
+//	struct spi_master *master = container_of(dev, struct spi_master, dev);
+//	struct spi_tiny_usb *priv = spi_master_get_devdata(master);
+//	const struct usbspi_intf_ops *iops = priv->iops;
+//struct spi_tiny_usb *data = dev_get_drvdata(dev);
+//    struct spi_tiny_usb *data = dev->driver_data;
+//    struct usb_device *usb_dev = data->usb_dev;
+//struct spi_tiny_usb *data =
+//		container_of (priv, struct spi_tiny_usb, priv);
+    struct spi_tiny_device *priv = dev_get_drvdata(dev);
+ //   struct usb_interface *interface;
+//    const struct usbspi_intf_ops *iops = priv->iops;
+ //   interface = usb_get_intfdata (priv->intf);
+    u16 value;
+	u8 ret2;
+	u8 ret3;
+	ret2 = kstrtou16(buf, 10, &value);
+	printk("value %d\n", value);
+	if (value == 100) {
+	ret3 = 1;
+	i2cspeed = 100;
+	} else if (value == 400) {
+	ret3 = 2;
+	i2cspeed = 400;
+	} else if (value == 1000) {
+	ret3 = 3;
+	i2cspeed = 1000;
+	} else {
+	return -EINVAL;
+	}
+//	mutex_lock (&data->io_mutex);
+/*    usb_control_msg(usb_dev,
+                   usb_sndctrlpipe(usb_dev, 0),
+                   81, USB_TYPE_VENDOR | USB_DIR_OUT,
+                   ret3, ret3,
+                   NULL, 0,
+                   1000);
+                   */
+
+	priv->iops->lock (priv->intf);
+	priv->iops->setup_data (priv->intf, 81, ret3,
+				    ret3, NULL, 0);
+	priv->iops->unlock (priv->intf);
+//    usbval = ret3;
+//	offs = ret3;
+//	gpio_val = 81;
+//	schedule_work (&priv->work);
+//	mutex_unlock (&data->io_mutex);
+    i2cspeed = ret2;
+    return count;
+}
+
+static ssize_t i2cspeed_show(struct device *dev,
+				   struct device_attribute *attr,
+				   char *buf)
+{
+//struct device *dev = kobj_to_dev(kobj);
+//struct spi_tiny_usb *priv = dev_get_drvdata(dev);
+int ret2;
+
+ret2 = i2cspeed;
+
+return scnprintf(buf, PAGE_SIZE, "%d\n", ret2);
+
+}
+static DEVICE_ATTR_RW(i2cspeed);
+/*
+struct class *class_usbio;
+dev_t device_number;
+struct device *device_usbio;
+*/
+static void
+setcs (struct spi_device *spi, bool enable)
+{
+//      struct spi_tiny_usb *priv = spi_controller_get_devdata(spi->master);
+//      u16 cs = spi->chip_select;
+	;
+//      gpiod_set_raw_value_cansleep(priv->cs_gpios[cs], enable); // cs now firmware controlled so just nop for now
+}
+
+static int create_sysfs_attrs(struct usb_interface *intf)
+{
+device_create_file(&intf->dev, &dev_attr_i2cspeed);
+/*
+class_usbio= class_create(THIS_MODULE,"usbio");
+device_usbio= device_create(class_usbio, NULL, device_number, NULL,"usbi2c");
+   device_create_file(device_usbio, &dev_attr_i2cspeed);
+
+    kobj = device_create_with_groups("usbio", kernel_kobj);
+    if (!kobj)
+        return -ENOMEM;
+    ret = sysfs_create_group(kobj, &spi_tiny_usb);
+    if (ret) {
+        kobject_put(kobj);
+    }
+*/
+return 0;
+}
+
+static void remove_sysfs_attrs(struct usb_interface *intf)
+{
+
+			device_remove_file(&intf->dev, &dev_attr_i2cspeed);
+ //           sysfs_remove_group(kobj,&attr_group);
+}
+
+static int
+spi_tiny_usb_xfer_one (struct spi_master *master, struct spi_message *m)
+{
+	struct spi_tiny_device *priv = spi_master_get_devdata (master);
+	struct usb_interface *interface;
+	struct spi_transfer *t;
+	const struct usbspi_intf_ops *iops = priv->iops;
+	struct spi_device *spi = m->spi;
+	static int total = 0;
+	int spi_flags = 0;
+	int ret = 0;
+	int temp;
+	int wait;
+	int offset2 = 0;
+	interface = usb_get_intfdata (priv->intf);
+
+
+//      setcs(spi, false);
+
+	m->actual_length = 0;
+
+	if (priv->csnum != spi->chip_select)
+	  {
+		  iops->lock (priv->intf);
+		  iops->setup_data (priv->intf, 76, spi->chip_select,
+				    spi->chip_select, NULL, 0);
+		  iops->unlock (priv->intf);
+//        printk("switched cable select to %d\n", spi->chip_select);
+	  }
+
+
+	if (priv->csmode != (spi->mode & SPI_CS_HIGH))
+	  {
+		  if ((spi->mode & SPI_CS_HIGH) == 0)
+		    {
+			    // low chip select
+			    iops->setup_data (priv->intf, 73, 0x0, 0x0, NULL,
+					      0);
+		    }
+		  else
+		    {
+			    iops->setup_data (priv->intf, 73,
+					      (spi->mode & SPI_CS_HIGH),
+					      (spi->mode & SPI_CS_HIGH), NULL,
+					      0);
+		    }
+		  priv->csmode = (spi->mode & SPI_CS_HIGH);
+	  }
+
+
+	list_for_each_entry (t, &m->transfers, transfer_list)
+	{
+		if (list_is_last (&t->transfer_list, &m->transfers))
+//                      spi_flags |= FLAGS_END;
+
+			if (priv->oldlsb != (spi->mode & SPI_LSB_FIRST))
+			  {
+				  printk ("mode lsb claims change \r\n");
+				  if (priv->oldlsb != 0x08)
+				    {
+					    priv->iops->setup_data (priv->
+								    intf, 160,
+								    0x08,
+								    0x08,
+								    NULL, 0);
+				    }
+				  else
+				    {
+					    priv->iops->setup_data (priv->
+								    intf, 160,
+								    0x00,
+								    0x00,
+								    NULL, 0);
+				    }
+			  }
+
+		priv->oldlsb = (spi->mode & SPI_LSB_FIRST);
+
+
+		if (priv->oldspihz != t->speed_hz)
+		  {
+			  printk ("setting clock \r\n");
+			  if ((t->speed_hz / 10000) > 9999)
+			    {
+				    t->speed_hz = 99990000;
+			    }
+
+			  iops->setup_data (priv->intf, 67,
+					    (t->speed_hz / 10000),
+					    (t->speed_hz / 10000), NULL, 0);
+
+
+		  }
+		priv->oldspihz = t->speed_hz;
+
+
+		if (priv->last_mode != spi->mode)
+		  {
+			  u8 spi_mode = spi->mode & (SPI_CPOL | SPI_CPHA);
+			  printk ("spi_mode = %d\r\n", spi_mode);
+			  priv->iops->setup_data (priv->intf, 68, spi_mode,
+						  spi_mode, NULL, 0);
+		  }
+
+		priv->last_mode = spi->mode;
+
+		if (priv->last_bpw != spi->bits_per_word)
+		  {
+			  priv->iops->setup_data (priv->intf, 69,
+						  spi->bits_per_word,
+						  spi->bits_per_word, NULL,
+						  0);
+			  if (wait)
+			    {
+				    ;
+			    }
+
+			  printk ("changed bits_per_word to %d\r\n",
+				  spi->bits_per_word);
+		  }
+
+		priv->last_bpw = spi->bits_per_word;
+
+		printk ("tx: %p rx: %p len: %d speed: %d flags: %d delay: %d\n", t->tx_buf, t->rx_buf, t->len, t->speed_hz, spi_flags, t->delay.value);
+
+//              if (t->cs_change)
+//                      spi_flags |= FLAGS_END;
+
+// IF TX and RX
+
+		if (t->tx_buf && t->rx_buf)
+		  {
+			  printk ("inside tx rx\n");
+			  if (t->len > 508)
+			    {
+				    void *rxbuf =
+					    kmalloc (t->len, GFP_KERNEL);
+				    offset2 = 0;
+				    while (t->len - offset2 > 508)
+				      {
+					      memcpy (priv->xfer_txbuf,
+						      t->tx_buf + offset2,
+						      508);
+					      iops->write_data (priv->intf,
+								priv->
+								xfer_txbuf,
+								508);
+					      iops->setup_data (priv->intf,
+								65, 508, 508,
+								NULL, 0);
+					      (void) iops->read_data (priv->
+								      intf,
+								      priv->
+								      xfer_rxbuf,
+								      508);
+					      memcpy (rxbuf + offset2,
+						      priv->xfer_txbuf, 508);
+					      offset2 += 508;
+					      m->actual_length += 508;
+				      }
+				    temp = t->len - offset2;
+				    memcpy (priv->xfer_txbuf,
+					    t->tx_buf + offset2, temp);
+				    iops->lock (priv->intf);
+				    iops->write_data (priv->intf,
+						      priv->xfer_txbuf, temp);
+				    iops->setup_data (priv->intf, 65, temp,
+						      temp, NULL, 0);
+				    (void) iops->read_data (priv->intf,
+							    priv->xfer_rxbuf,
+							    temp);
+				    iops->unlock (priv->intf);
+				    memcpy (rxbuf + offset2, priv->xfer_rxbuf,
+					    temp);
+				    memcpy (t->rx_buf, rxbuf, t->len);
+				    offset2 = 0;
+				    m->actual_length += temp;
+				    iops->lock (priv->intf);
+				    kfree (rxbuf);
+				    iops->unlock (priv->intf);
+			    }
+			  else
+			    {
+				    memcpy (priv->xfer_txbuf, t->tx_buf,
+					    t->len);
+				    wait = iops->write_data (priv->intf,
+							     t->tx_buf,
+							     t->len);
+				    if (wait)
+				      {
+					      ;
+				      }
+
+				    m->actual_length += t->len;
+				    iops->setup_data (priv->intf, 65, t->len,
+						      t->len, NULL, 0);
+				    (void) iops->read_data (priv->intf,
+							    priv->xfer_rxbuf,
+							    t->len);
+				    memcpy (t->rx_buf, priv->xfer_rxbuf,
+					    t->len);
+				    total = total + 1;
+			    }
+			  printk ("frame_length = %d actual_length = %d\n",
+				  m->frame_length, m->actual_length);
+			  spi_finalize_current_message (master);
+//              setcs(spi, true);
+			  m->status = ret;
+			  return 0;
+		  }
+
+
+// IF TX
+		if (t->tx_buf)
+		  {
+			  if (t->len > 508)
+			    {
+				    while (t->len - offset2 > 508)
+				      {
+					      memcpy (priv->xfer_txbuf,
+						      t->tx_buf + offset2,
+						      508);
+					      iops->write_data (priv->intf,
+								priv->
+								xfer_txbuf,
+								508);
+					      offset2 += 508;
+					      m->actual_length += 508;
+				      }
+				    temp = t->len - offset2;
+				    memcpy (priv->xfer_txbuf,
+					    t->tx_buf + offset2, temp);
+				    iops->write_data (priv->intf,
+						      priv->xfer_txbuf, temp);
+				    offset2 = 0;
+				    m->actual_length += temp;
+			    }
+			  else
+			    {
+				    memcpy (priv->xfer_txbuf, t->tx_buf, 508);
+				    wait = iops->write_data (priv->intf,
+							     priv->xfer_txbuf,
+							     t->len);
+				    if (wait)
+				      {
+					      ;
+				      }
+				    m->actual_length += t->len;
+			    }
+		  }
+// IF RX
+
+		if (t->rx_buf)
+		  {
+			  offset2 = 0;
+			  if (t->len > 508)
+			    {
+				    while (t->len - offset2 > 508)
+				      {
+					      memset (priv->xfer_txbuf, 0x00,
+						      t->len);
+					      iops->lock (priv->intf);
+					      iops->write_data (priv->intf,
+								priv->
+								xfer_txbuf,
+								t->len);
+					      iops->unlock (priv->intf);
+					      iops->setup_data (priv->intf,
+								65, 508, 508,
+								NULL, 0);
+					      (void) iops->read_data (priv->
+								      intf,
+								      priv->
+								      xfer_rxbuf,
+								      508);
+					      memcpy (t->rx_buf + offset2,
+						      priv->xfer_rxbuf, 508);
+					      offset2 += 508;
+					      m->actual_length += 508;
+				      }
+				    memset (priv->xfer_txbuf, 0x00, t->len);
+				    iops->write_data (priv->intf,
+						      priv->xfer_txbuf,
+						      t->len);
+				    temp = t->len - offset2;
+				    iops->setup_data (priv->intf, 65, temp,
+						      temp, NULL, 0);
+				    (void) iops->read_data (priv->intf,
+							    priv->xfer_rxbuf,
+							    temp);
+				    memcpy (t->rx_buf + offset2,
+					    priv->xfer_rxbuf, temp);
+				    offset2 = 0;
+				    m->actual_length += temp;
+			    }
+			  else
+			    {
+				    memset (priv->xfer_txbuf, 0x00, t->len);
+				    iops->write_data (priv->intf,
+						      priv->xfer_txbuf,
+						      t->len);
+				    iops->setup_data (priv->intf, 65, t->len,
+						      t->len, NULL, 0);
+				    (void) iops->read_data (priv->intf,
+							    priv->xfer_rxbuf,
+							    t->len);
+				    memcpy (t->rx_buf, priv->xfer_rxbuf,
+					    t->len);
+				    m->actual_length += t->len;
+			    }
+		  }
+		printk ("frame_length = %d actual_length = %d\n",
+			m->frame_length, m->actual_length);
+		spi_finalize_current_message (master);
+		if (t->delay.value)
+			udelay (t->delay.value);
+	}
+	//   setcs(spi, true);
+	m->status = ret;
+	return 0;
+}
+
+
+static int
+usbspi_init_io (struct spi_controller *master, unsigned int dev_idx)
+{
+	struct spi_tiny_device *priv = spi_controller_get_devdata (master);
+	struct platform_device *pdev = priv->pdev;
+	const struct usb_spi_platform_data *pd;
+	const struct usbspi_dev_data *data;
+	struct gpiod_lookup_table *lookup;
+	size_t lookup_size, size;
+	char *label;
+	unsigned int i;
+	u16 cs;
+	pd = pdev->dev.platform_data;
+
+	data = pd->spi_info[dev_idx].platform_data;
+	if (!data || data->magic != USBSPI_IO_DESC_MAGIC)
+		return 0;
+
+	size = data->desc_len + 1;
+
+	lookup_size = sizeof (*lookup) + size * sizeof (struct gpiod_lookup);
+	lookup = devm_kzalloc (&pdev->dev, lookup_size, GFP_KERNEL);
+	if (!lookup)
+		return -ENOMEM;
+
+	cs = pd->spi_info[dev_idx].chip_select;
+
+	lookup->dev_id = devm_kasprintf (&pdev->dev, GFP_KERNEL, "spi%d.%d",
+					 master->bus_num, cs);
+	if (!lookup->dev_id)
+	  {
+		  devm_kfree (&pdev->dev, lookup);
+		  return -ENOMEM;
+	  }
+
+	label = devm_kasprintf (&pdev->dev, GFP_KERNEL, "usb-tiny-usb.%d",
+				pdev->id);
+	if (!label)
+	  {
+		  printk ("no mem for labels\n");
+		  devm_kfree (&pdev->dev, (void *) lookup->dev_id);
+		  devm_kfree (&pdev->dev, lookup);
+		  return -ENOMEM;
+	  }
+
+	for (i = 0; i < data->desc_len; i++)
+	  {
+		  printk ("con_id: '%s' idx: %d, flags: 0x%x\n",
+			  data->desc[i].con_id, data->desc[i].idx,
+			  data->desc[i].flags);
+		  lookup->table[i].key = label;
+		  lookup->table[i].chip_hwnum = data->desc[i].idx;
+		  lookup->table[i].idx = 0;
+		  lookup->table[i].con_id = data->desc[i].con_id;
+		  lookup->table[i].flags = data->desc[i].flags;
+	  }
+
+	priv->lookup[cs] = lookup;
+	gpiod_add_lookup_table (lookup);
+
+	return 0;
+}
+
+static int
+usbspi_probe (struct platform_device *pdev)
+{
+    struct spi_master *master;
+	const struct usb_spi_platform_data *pd = dev_get_platdata(&pdev->dev);
+	struct device *dev = &pdev->dev;
+//	struct spi_controller *master;
+	struct spi_tiny_device *priv;
+	struct gpio_desc *desc;
+
+	u8 num_cs, max_cs = 0;
+	unsigned int i;
+	int ret;
+/*
+	pd = dev->platform_data;
+	if (!pd)
+	  {
+		  dev_err (dev, "Missing platform data.\n");
+		  return -EINVAL;
+	  }
+
+    priv = devm_kzalloc(&pdev->dev, sizeof(*priv), GFP_KERNEL);
+    priv->intf->dev = pdev->dev;
+*/
+/*	if (!pd->ops ||
+	    !pd->ops->read_data || !pd->ops->write_data ||
+	    !pd->ops->lock || !pd->ops->unlock)
+	    	return -EINVAL;
+
+	if (pd->spi_info_len > 5)
+		return -EINVAL;
+*/
+	/* Find max. slave chipselect number */
+	num_cs = pd->spi_info_len;
+
+	for (i = 0; i < num_cs; i++)
+	  {
+		  if (max_cs < pd->spi_info[i].chip_select)
+			  max_cs = pd->spi_info[i].chip_select;
+	  }
+
+	if (max_cs > 4)
+	  {
+		  printk ("Invalid max CS in platform data: %d\n", max_cs);
+	  }
+	printk ("spi_plat_usb CS count %u, max CS %u\n", num_cs, max_cs);
+	max_cs += 1;		/* including CS0 */
+	master = spi_alloc_master (&pdev->dev, sizeof (*priv));
+	device_set_node(&master->dev, dev_fwnode(dev));
+	if (!master)
+		printk ("failed spi_alloc_master\n");
+//              return -ENOMEM;
+//    device_set_node(&master->dev, dev_fwnode(dev));
+	platform_set_drvdata (pdev, master);
+	priv = spi_controller_get_devdata (master);
+	priv->master = master;
+	priv->pdev = pdev;
+	priv->intf = to_usb_interface (dev->parent);
+	priv->iops = pd->ops;
+	master->bus_num = -1;
+	master->mode_bits = SPI_CPOL | SPI_CPHA | SPI_CS_HIGH | SPI_LSB_FIRST;	//| SPI_LOOP |
+	master->num_chipselect = max_cs;
+	master->min_speed_hz = 450;
+	master->max_speed_hz = 30000000;
+	master->bits_per_word_mask = SPI_BPW_RANGE_MASK (4, 16);
+	master->set_cs = setcs;
+	master->transfer_one_message = spi_tiny_usb_xfer_one;
+	master->auto_runtime_pm = false;
+
+	priv->cs_gpios = devm_kcalloc (&master->dev, max_cs, sizeof (desc),
+				       GFP_KERNEL);
+	if (!priv->cs_gpios)
+	  {
+		  printk ("failed to set mem for storing cs\n");
+		  spi_controller_put (master);
+		  return -ENOMEM;
+	  }
+
+	pd->spi_info->irq = GPIO_irqNumber;
+
+	for (i = 0; i < num_cs; i++)
+	  {
+		  unsigned int idx = pd->spi_info[i].chip_select;
+		  printk ("CS num: %u\n", idx);
+		  desc = devm_gpiod_get_index (&priv->pdev->dev, "spi-cs",
+					       i, GPIOD_OUT_LOW);
+		  if (IS_ERR (desc))
+		    {
+			    ret = PTR_ERR (desc);
+			    dev_err (&pdev->dev, "CS %u gpiod err: %d\n", i,
+				     ret);
+			    continue;
+		    }
+		  priv->cs_gpios[idx] = desc;
+	  }
+
+	ret = spi_register_controller (master);
+	if (ret < 0)
+	  {
+		  printk ("Failed to register spi master\n");
+		  spi_controller_put (master);
+		  return ret;
+	  }
+
+	priv->oldspihz = 7777;
+	priv->last_mode = 0xffff;
+	for (i = 0; i < pd->spi_info_len; i++)
+	  {
+		  struct spi_device *sdev;
+		  u16 cs;
+
+		  printk ("slave: '%s', CS: %u\n",
+			  pd->spi_info[i].modalias,
+			  pd->spi_info[i].chip_select);
+
+		  ret = usbspi_init_io (master, i);
+		  if (ret < 0)
+		    {
+			    printk ("Can't add slave IO: %d\n", ret);
+			    continue;
+		    }
+
+//        sdev->cs_gpiod = priv->cs_gpios[0];
+		  sdev = spi_new_device (master, &pd->spi_info[i]);
+		  if (!sdev)
+		    {
+			    cs = pd->spi_info[i].chip_select;
+			    printk ("spi_plat_usb Can't add slave '%s', CS %u\n", pd->spi_info[i].modalias, cs);
+			    if (priv->lookup[cs])
+			      {
+				      printk ("spi_plat_usb  failed lookup.cs\n");
+				      gpiod_remove_lookup_table (priv->
+								 lookup[cs]);
+				      priv->lookup[cs] = NULL;
+			      }
+		    }
+	  }
+ //   create_sysfs_attrs(priv->intf);
+ device_create_file(&priv->intf->dev, &dev_attr_i2cspeed);
+	printk ("%s: spi pdev %p\n", __func__, priv->pdev);
+	return 0;
+}
+
+static int
+usbspi_slave_release (struct device *dev, void *data)
+{
+	struct spi_device *spi = to_spi_device (dev);
+	struct spi_tiny_device *priv = data;
+	u16 cs = spi->chip_select;
+
+	dev_dbg (dev, "%s: remove CS %u\n", __func__, cs);
+	spi_unregister_device (to_spi_device (dev));
+
+	if (priv->lookup[cs])
+		gpiod_remove_lookup_table (priv->lookup[cs]);
+	return 0;
+}
+
+static int
+usbspi_remove (struct platform_device *pdev)
+{
+	struct spi_controller *master;
+	struct spi_tiny_device *priv;
+
+	master = platform_get_drvdata (pdev);
+	priv = spi_controller_get_devdata (master);
+	remove_sysfs_attrs(priv->intf);
+
+//	device_destroy(class_usbio, device_number);
+ //   class_destroy(class_usbio);
+	device_for_each_child (&master->dev, priv, usbspi_slave_release);
+
+	spi_unregister_controller (master);
+	return 0;
+}
+
+static const struct of_device_id usbspi_of_match[] = {
+	{.compatible = "usbspi,spi_plat_usb",},
+	{},
+};
+
+MODULE_DEVICE_TABLE (of, usbspi_of_match);
+
+static const struct spi_device_id usbspi_ids[] = {
+	{.name = "spi_plat_usb", (unsigned long) usbspi_probe},
+	{},
+};
+
+MODULE_DEVICE_TABLE (spi, usbspi_ids);
+
+static struct platform_driver spi_plat_usb = {
+	.driver = {
+		   .name = "spi_plat_usb",
+		   .of_match_table = of_match_ptr (usbspi_of_match),
+		   },
+	.probe = usbspi_probe,
+	.remove = usbspi_remove,
+};
+
+module_platform_driver (spi_plat_usb);
+
+MODULE_ALIAS ("platform:spi_plat_usb");
+MODULE_AUTHOR ("Anatolij Gustschin <agust@denx.de");
+MODULE_DESCRIPTION ("USBSPI master driver");
+MODULE_LICENSE ("GPL v2");
