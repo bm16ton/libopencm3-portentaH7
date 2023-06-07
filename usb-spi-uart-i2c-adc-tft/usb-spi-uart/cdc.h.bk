@@ -1,0 +1,160 @@
+
+#ifndef CDC_H
+#define CDC_H
+
+#include <libopencm3/cm3/nvic.h>
+#include <libopencm3/cm3/systick.h>
+
+
+
+typedef struct usb_cdc_line_coding usb_cdc_line_coding_s;
+
+
+
+extern volatile uint32_t poopsielst;
+extern volatile uint32_t poopsiettl;
+
+extern volatile uint32_t currentold;
+extern volatile int lcddma;
+extern uint16_t lastct;
+
+typedef struct usb_cdc_line_coding usb_cdc_line_coding_s;
+
+#define USBUSART_ISR_TEMPLATE(USART, DMA_IRQ) do { \
+usart_recv(USART1); \
+if ((USART_ISR(USART1) & USART_ISR_TC) || (DMA_LISR(DMA1) & DMA_LISR16_CFEIF)) { \
+dma_disable(DMA1, DMA_CHANNEL2); \
+	dma_disable_stream(DMA1, DMA_STREAM2); \
+dma_disable(DMA1, DMA_CHANNEL3); \
+	dma_disable_stream(DMA1, DMA_STREAM3); \
+usart_disable_tx_dma(USART1); \
+	usart_disable(USART1); \
+	usart_clear_interrupt_flags_all(USART1); \
+	dma_clear_interrupt_flags(DMA1, DMA_STREAM2); \
+	dma_clear_interrupt_flags(DMA1, DMA_STREAM3); \
+	dma_enable(DMA1, DMA_CHANNEL2); \
+	dma_enable_stream(DMA1, DMA_STREAM2); \
+	dma_enable(DMA1, DMA_CHANNEL3); \
+	dma_enable_stream(DMA1, DMA_STREAM3); \
+	usart_enable(USART1); \
+} \
+const bool isIdle = usart_get_flag(USART1, USART_FLAG_IDLE); \
+	if (isIdle) { \
+	USART_ICR(USART1) = USART_ICR_IDLECF;  \
+volatile uint32_t current = (510 - dma_get_number_of_data(DMA1, DMA_STREAM3)); \
+/* printf("usart isr current= %ld poopsielst= %ld lastct %d\r\n", current, poopsielst, lastct); */ \
+/* printf("current - poopsielst = %ld \r\n", (current - poopsielst)); */  \
+if ((current - poopsielst) > 0 ) { \
+if (dma_get_current_target(DMA1, DMA_STREAM3) == lastct) { \
+volatile uint32_t poopsie = (current - poopsielst); \
+if (dma_get_current_target(DMA1, DMA_STREAM3) == 0) { \
+volatile uint16_t actual1 = usbd_ep_write_packet(g_usbd_dev, 0x85, &buf_rx[poopsielst], poopsie);  \
+} else { \
+volatile uint16_t actual1 = usbd_ep_write_packet(g_usbd_dev, 0x85, &buf_rx2[poopsielst], poopsie);  \
+	} \
+} \
+if (dma_get_current_target(DMA1, DMA_STREAM3) != lastct) { \
+poopsielst = 0; \
+volatile uint32_t poopsie = (current - poopsielst); \
+if (dma_get_current_target(DMA1, DMA_STREAM3) == 0) { \
+volatile uint16_t actual1 = usbd_ep_write_packet(g_usbd_dev, 0x85, &buf_rx2[poopsielst], (512 - poopsielst)); \
+volatile uint16_t actual2 = usbd_ep_write_packet(g_usbd_dev, 0x85, &buf_rx, current);  \
+} else { \
+volatile uint16_t actual1 = usbd_ep_write_packet(g_usbd_dev, 0x85, &buf_rx[poopsielst], (512 - poopsielst));  \
+volatile uint16_t actual2 = usbd_ep_write_packet(g_usbd_dev, 0x85, &buf_rx2, current);  \
+	} \
+	}\
+} \
+poopsielst = current; \
+lastct = dma_get_current_target(DMA1, DMA_STREAM3); \
+/*	printf("inside  usart1_isr uart is idle\r\n");  */ \
+} \
+/*	usbuart_run();  */ \
+/*	usart_disable(USART1);   */ \
+} while(0)
+
+/*
+#define USBUSART_DMA_RX_ISR_TEMPLATE(USART_IRQ, DMA_RX_CHAN) do {		\
+nvic_disable_irq(NVIC_USART1_IRQ); \
+usart_clear_interrupt_flag(USART1, USART_CR1_RXNEIE); \
+volatile uint32_t current = (dma_get_number_of_data(DMA1, DMA_STREAM3)); \
+dma_clear_interrupt_flags(DMA1, DMA_STREAM3);	\
+volatile uint32_t poopsie = (512 - current); \
+volatile uint32_t poopsie2 = (poopsie - poopsielst); \
+volatile int32_t shit = (poopsie - poopsielst); \
+if (DMA_HISR(DMA1) & DMA_HISR5_TCIE) { \
+volatile int fgh = (poopsielst - 512); \
+volatile int pko = (512 - poopsielst); \
+printf("poopsielst %ld poopsie %ld poopsie2 %ld fgh %d pko %d \r\n", poopsielst, poopsie, poopsie2, fgh, pko); \
+volatile uint16_t actual1 = usbd_ep_write_packet(g_usbd_dev, 0x85, &buf_rx[poopsielst], pko);  \
+volatile uint16_t actual2 = usbd_ep_write_packet(g_usbd_dev, 0x85, buf_rx, poopsie);  \
+poopsielst = poopsie; \
+} else if (poopsie >= 1) { \
+volatile uint32_t tosend = (poopsie - poopsielst); \
+printf("poopsie last %ld poopsie %ld tosend %ld dma-get %d \r\n", poopsielst, poopsie, tosend, dma_get_number_of_data(DMA1, DMA_STREAM3)); \
+volatile uint16_t actual = usbd_ep_write_packet(g_usbd_dev, 0x85, &buf_rx[poopsielst], tosend);  \
+poopsielst += poopsie; \
+} \
+nvic_enable_irq(NVIC_USART1_IRQ); \
+} while(0)
+*/
+
+#define USBUSART_DMA_RX_ISR_TEMPLATE(USART_IRQ, DMA_RX_CHAN) do {		\
+if ((USART_ISR(USART1) & USART_ISR_TC) || (DMA_LISR(DMA1) & DMA_LISR16_CFEIF)) { \
+dma_disable(DMA1, DMA_CHANNEL2); \
+	dma_disable_stream(DMA1, DMA_STREAM2); \
+dma_disable(DMA1, DMA_CHANNEL3); \
+	dma_disable_stream(DMA1, DMA_STREAM3); \
+usart_disable_tx_dma(USART1); \
+	usart_disable(USART1); \
+	usart_disable_tx_fifo_empty_interrupt(USART1); \
+usart_disable_tx_fifo_threshold_interrupt(USART1); \
+usart_disable_rx_fifo_threshold_interrupt(USART1); \
+	usart_clear_interrupt_flags_all(USART1); \
+	dma_clear_interrupt_flags(DMA1, DMA_STREAM2); \
+	dma_clear_interrupt_flags(DMA1, DMA_STREAM3); \
+	dma_enable(DMA1, DMA_CHANNEL2); \
+	dma_enable_stream(DMA1, DMA_STREAM2); \
+	dma_enable(DMA1, DMA_CHANNEL3); \
+	dma_enable_stream(DMA1, DMA_STREAM3); \
+	usart_enable(USART1); \
+} \
+volatile uint32_t current = (510 - dma_get_number_of_data(DMA1, DMA_STREAM3)); \
+/*printf("dma isr current= %ld poopsielst= %ld lastct %d\r\n", current, poopsielst, lastct); */ \
+if ((current - poopsielst) > 0 ) { \
+if (dma_get_current_target(DMA1, DMA_STREAM3) == lastct) { \
+volatile uint32_t poopsie = (current - poopsielst); \
+if (dma_get_current_target(DMA1, DMA_STREAM3) == 0) { \
+volatile uint16_t actual1 = usbd_ep_write_packet(g_usbd_dev, 0x85, &buf_rx[poopsielst], poopsie);  \
+} else { \
+volatile uint16_t actual1 = usbd_ep_write_packet(g_usbd_dev, 0x85, &buf_rx2[poopsielst], poopsie);  \
+	} \
+} \
+if (dma_get_current_target(DMA1, DMA_STREAM3) != lastct) { \
+poopsielst = 0; \
+volatile uint32_t poopsie = (current - poopsielst); \
+if (dma_get_current_target(DMA1, DMA_STREAM3) == 0) { \
+volatile uint16_t actual1 = usbd_ep_write_packet(g_usbd_dev, 0x85, &buf_rx2[poopsielst], (512 - poopsielst)); \
+volatile uint16_t actual2 = usbd_ep_write_packet(g_usbd_dev, 0x85, &buf_rx, current);  \
+} else { \
+volatile uint16_t actual1 = usbd_ep_write_packet(g_usbd_dev, 0x85, &buf_rx[poopsielst], (512 - poopsielst));  \
+volatile uint16_t actual2 = usbd_ep_write_packet(g_usbd_dev, 0x85, &buf_rx2, current);  \
+	} \
+} \
+} \
+poopsielst = current; \
+lastct = dma_get_current_target(DMA1, DMA_STREAM3); \
+} while(0)
+
+
+
+
+void SysTick_IRQn_handler( void );
+void delay_ms( uint32_t ms );
+int sdramsetup( void );
+extern volatile uint32_t systick;
+int _write(int file, char *ptr, int len);
+//void i2c_init(void);
+uint32_t SysTick_Config(uint32_t ticks);
+
+#endif

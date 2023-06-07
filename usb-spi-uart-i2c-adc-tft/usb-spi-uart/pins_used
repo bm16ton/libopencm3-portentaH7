@@ -1,0 +1,90 @@
+// adc
+gpio_mode_setup(GPIOA, GPIO_MODE_ANALOG, GPIO_PUPD_NONE, GPIO4);
+gpio_mode_setup(GPIOA, GPIO_MODE_ANALOG, GPIO_PUPD_NONE, GPIO6);
+
+// usb gpio
+#define GPIO1_PORT   GPIOA
+#define GPIO1_PIN    GPIO8
+#define GPIO2_PORT   GPIOC
+#define GPIO2_PIN    GPIO7
+#define GPIO3_PORT   GPIOG
+#define GPIO3_PIN    GPIO7
+#define GPIO4_PORT   GPIOC
+#define GPIO4_PIN    GPIO7
+#define GPIO5_PORT   GPIOK
+#define GPIO5_PIN    GPIO1
+
+// usb i2c
+	gpio_set_output_options(GPIOH, GPIO_OTYPE_OD, GPIO_OSPEED_100MHZ,
+				GPIO7 | GPIO8);
+
+// rgb
+gpio_clear(GPIOK, GPIO6);
+gpio_set(GPIOK, GPIO7);
+gpio_clear(GPIOK, GPIO5);
+
+// uart
+	gpio_mode_setup(GPIOA, GPIO_MODE_AF, GPIO_PUPD_NONE, GPIO9);
+	gpio_mode_setup(GPIOA, GPIO_MODE_AF, GPIO_PUPD_NONE, GPIO10);
+
+// ulpi pins
+	ulpi_pins(GPIOA, GPIO3 | GPIO5);
+	ulpi_pins(GPIOB, GPIO0 | GPIO1 | GPIO5  | GPIO10 | GPIO11 | GPIO12 | GPIO13);
+	ulpi_pins(GPIOC, GPIO0);
+	ulpi_pins(GPIOH, GPIO4);
+	ulpi_pins(GPIOI, GPIO11);
+
+// sdram
+	{GPIOD, GPIO0 | GPIO1 | GPIO8 | GPIO9 | GPIO10 | GPIO14 | GPIO15},
+	{GPIOE, GPIO0 | GPIO1 | GPIO7 | GPIO8 | GPIO9 | GPIO10 |
+			GPIO11 | GPIO12 | GPIO13 | GPIO14 | GPIO15 },
+	{GPIOF, GPIO0 | GPIO1 | GPIO2 | GPIO3 | GPIO4 | GPIO5 | GPIO11 |
+			GPIO12 | GPIO13 | GPIO14 | GPIO15 },
+	{GPIOG, GPIO0 | GPIO1 | GPIO2 | GPIO4 | GPIO5 | GPIO8 | GPIO15},
+	{GPIOH, GPIO2 | GPIO5 | GPIO3}
+
+//spi2
+
+	    gpio_mode_setup(GPIOC, GPIO_MODE_AF, GPIO_PUPD_NONE,
+        GPIO2
+        |  GPIO3
+	    gpio_mode_setup(GPIOI, GPIO_MODE_AF, GPIO_PUPD_NONE,
+        GPIO0
+        |  GPIO1
+
+// spi2 ??? cs? must check
+    gpio_mode_setup(GPIOA, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, GPIO8);
+    gpio_set_output_options(GPIOA, GPIO_OTYPE_PP,
+				GPIO_OSPEED_100MHZ, GPIO8);
+    gpio_clear(GPIOA, GPIO8);
+
+//spi5 tp irq
+	gpio_mode_setup(GPIOC, GPIO_MODE_INPUT, GPIO_PUPD_NONE, GPIO7);
+	gpio_set(GPIOC, GPIO7);
+
+//spi5
+	gpio_mode_setup(GPIOJ, GPIO_MODE_AF, GPIO_PUPD_NONE,
+        GPIO10
+        |  GPIO11
+    );
+    	gpio_mode_setup(GPIOH, GPIO_MODE_AF, GPIO_PUPD_NONE,
+        GPIO6
+    );
+//hardware nss
+	gpio_mode_setup(GPIOF, GPIO_MODE_AF, GPIO_PUPD_NONE,
+        GPIO6
+    );
+//gpio cs
+    gpio_mode_setup(GPIOJ, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, GPIO7);
+
+//gpio reset
+    gpio_mode_setup(GPIOK, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, GPIO1);
+// tp_cs
+    gpio_mode_setup(GPIOC, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, GPIO6);
+//gpio dc
+
+//tp cs
+#define TS_CS_PORT       GPIOC
+#define TS_CS_PIN       GPIO6
+
+    gpio_mode_setup(GPIOH, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, GPIO15);

@@ -1,0 +1,85 @@
+
+#ifndef CDC_H
+#define CDC_H
+
+#include <libopencm3/cm3/nvic.h>
+#include <libopencm3/cm3/systick.h>
+//#include <libopencm3/stm32/dma.h>
+#include <setjmp.h>
+
+#define BOOTMAGIC0 0xb007da7a
+#define BOOTMAGIC1 0xbaadfeed
+#define BOOTMAGIC2 0xbaadfeed
+#define BOOTMAGIC3 0xb007da7a
+#define BOOTMAGIC4 0xbeedfaad
+#define BOOTMAGIC5 0xb007da7a
+#define BOOTMAGIC6 0xb006faad
+#define BOOTMAGIC7 0xb007d07a
+
+//#define DMA_CGIF DMA_IFCR_CGIF1
+extern uint32_t tests[4];
+
+typedef struct usb_cdc_line_coding usb_cdc_line_coding_s;
+
+#define USBUSART_ISR_TEMPLATE(USART, DMA_IRQ) do { \
+nvic_disable_irq(NVIC_USART1_IRQ); \
+usart_recv(USART1); \
+uint32_t poopsie = (512 - dma_get_number_of_data(DMA1, DMA_STREAM3)); \
+usart_clear_interrupt_flag(USART1, USART_CR1_RXNEIE); \
+dma_clear_interrupt_flags(DMA1, DMA_STREAM3);	\
+const bool isIdle = usart_get_flag(USART1, USART_FLAG_IDLE); \
+if (poopsie >= 1) { \
+	uint16_t actual = usbd_ep_write_packet(g_usbd_dev, 0x85, buf_rx, poopsie);  \
+	} \
+	if (isIdle) { \
+/*	printf("inside  usart1_isr uart is idle\r\n");  */ \
+	USART_ICR(USART1) = USART_ICR_IDLECF;  \
+/*	usbuart_run();  */\
+/*	usart_disable(USART1);   */ \
+	uart_status(USART1, "checking usart1"); \
+	/*	usart_enable(USART1); */ \
+	dma_disable_stream(DMA1, DMA_STREAM3); \
+	dma_clear_interrupt_flags(DMA1, DMA_STREAM3);	\
+	usart_clear_interrupt_flags_all(USART1); \
+	dma_set_number_of_data(DMA1, DMA_STREAM3, 512); \
+	__DSB(); \
+/*	usart_enable(USART1); */ \
+	dma_enable_stream(DMA1, DMA_STREAM3); \
+		} \
+	nvic_enable_irq(NVIC_USART1_IRQ); \
+} while(0)
+
+#define USBUSART_DMA_RX_ISR_TEMPLATE(USART_IRQ, DMA_RX_CHAN) do {		\
+/*	printf("inside  usart1_isr uart is idle\r\n"); */ \
+uint32_t poopsie = (512 - dma_get_number_of_data(DMA1, DMA_STREAM3)); \
+if (poopsie >= 1) { \
+	uint16_t actual = usbd_ep_write_packet(g_usbd_dev, 0x85, buf_rx, poopsie);  \
+	} \
+	nvic_disable_irq(NVIC_USART1_IRQ);						\
+	dma_disable_stream(DMA1, DMA_STREAM3); \
+	dma_clear_interrupt_flags(DMA1, DMA_RX_CHAN);	\
+	usart_clear_interrupt_flags_all(USART1); \
+	dma_set_number_of_data(DMA1, DMA_STREAM3, 512); \
+	__DSB(); \
+	dma_enable_stream(DMA1, DMA_STREAM3); \
+/*	usbuart_run();		*/						\
+	nvic_enable_irq(NVIC_USART1_IRQ);						\
+} while(0)
+//printf("uart rx buf = %hn \r\n", buf_rx);
+
+//while ((USART_ISR(USART1) & USART_ISR_RXNE) != 0) {
+//while ((USART_ISR_RXNE) != 0) {
+//buf[i] = usart_recv(USART1);
+//i = i + 1;
+//}
+
+
+void SysTick_IRQn_handler( void );
+void delay_ms( uint32_t ms );
+int sdramsetup( void );
+extern volatile uint32_t systick;
+int _write(int file, char *ptr, int len);
+//void i2c_init(void);
+uint32_t SysTick_Config(uint32_t ticks);
+
+#endif

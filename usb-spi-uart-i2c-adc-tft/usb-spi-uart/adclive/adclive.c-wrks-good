@@ -1,0 +1,182 @@
+#include <stdbool.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+
+#include <libopencm3/cm3/scb.h>
+#include <libopencm3/stm32/gpio.h>
+#include <libopencm3/stm32/adc.h>
+#include <libopencm3/stm32/timer.h>
+#include <libopencm3/stm32/rcc.h>
+#include "timing_stm32.h"
+#include "st7789_stm32_spi.h"
+#include "fonts/font_fixedsys_mono_24.h"
+#include "fonts/font_ubuntu_48.h"
+#include "ILI9486_Defines.h"
+
+//#include "fonts/pic.h"
+#include "fonts/bitmap_typedefs.h"
+
+#include "pos.h"
+
+uint32_t adc_liveonce(void);
+
+void adc_livestart(void)
+{
+	rcc_periph_clock_enable(RCC_ADC1);
+
+    st_fill_screen(ST_COLOR_RED);
+	gpio_mode_setup(GPIOA, GPIO_MODE_ANALOG, GPIO_PUPD_NONE, GPIO1);
+	gpio_mode_setup(GPIOA, GPIO_MODE_ANALOG, GPIO_PUPD_NONE, GPIO2);
+	gpio_mode_setup(GPIOA, GPIO_MODE_ANALOG, GPIO_PUPD_NONE, GPIO4);
+	rcc_periph_clock_enable(RCC_ADC1);
+	rcc_periph_clock_enable(RCC_ADC2);
+	adc_set_clk_prescale(ADC_CCR_ADCPRE_BY2);
+	adc_power_off(ADC1);
+//	adc_power_off(ADC2);
+	adc_disable_scan_mode(ADC1);
+//	adc_set_continuous_conversion_mode(ADC1);
+	adc_set_right_aligned(ADC1);
+//	adc_set_sample_time(ADC1, ADC_CHANNEL5, ADC_SMPR_SMP_3CYC);
+adc_set_sample_time_on_all_channels(ADC1, ADC_SMPR_SMP_28CYC);
+	adc_set_resolution(ADC1, 12);
+//	uint8_t channels[] = {ADC_CHANNEL2};
+//	adc_set_multi_mode(ADC_CCR_MULTI_DUAL_INTERLEAVED);
+//    adc_enable_dma(ADC1);
+//    adc_set_dma_continue(ADC1);
+	adc_power_on(ADC1);
+//	adc_power_on(ADC2);
+//	adc_set_regular_sequence(ADC1, 1, channels);
+//	adc_start_conversion_regular(ADC1);
+//    adc_res[0] = adc_read_regular(ADC1);
+/*   adc_power_off(ADC1);
+    adc_set_clk_prescale(ADC_CCR_ADCPRE_BY2);
+    adc_enable_scan_mode(ADC1);
+    adc_set_continuous_conversion_mode(ADC1);
+//    adc_disable_discontinuous_mode_regular(ADC1);
+//    adc_enable_external_trigger_regular(ADC1, ADC_CR2_SWSTART, ADC_CR2_EXTEN_DISABLED);
+    adc_set_right_aligned(ADC1);
+    adc_set_sample_time_on_all_channels(ADC1, ADC_SMPR_SMP_28CYC);
+    adc_set_resolution(ADC1, 12);
+    uint8_t channels[] = {ADC_CHANNEL2};
+    adc_set_multi_mode(ADC_CCR_MULTI_DUAL_INTERLEAVED);
+    //ADC_CCR_MULTI_INDEPENDENT
+    //ADC_CCR_MULTI_TRIPLE_INTERLEAVED
+    adc_set_regular_sequence(ADC1, 1, channels);
+    adc_enable_dma(ADC1);
+    adc_set_dma_continue(ADC1);
+    adc_power_on(ADC1);
+*/
+    adc_start_conversion_regular(ADC1);
+     st_set_address_window(1, 1, 320, 480);
+//    adc_liveonce();
+}
+
+uint16_t adcolor = 0xFFE0;
+static char ret[] = "0.00 ";
+ static int lastxcord;
+ static int lastycord;
+ static int curxcord;
+ static int curycord;
+
+void adclive(void) {
+/**
+ * Draw a line from (x0,y0) to (x1,y1) with `width` and `color`.
+ * @param x0 start column address.
+ * @param y0 start row address.
+ * @param x1 end column address.
+ * @param y1 end row address.
+ * @param width width or thickness of the line
+ * @param color 16-bit RGB565 color of the line
+ */
+
+
+ st_fill_screen(ST_COLOR_RED);
+
+ while (1) {
+    curycord = adc_liveonce();
+    printf("curycord = %d\r\n", curycord);
+    curxcord = lastxcord + 13;
+    printf("curxcord = %d\r\n", curxcord);
+    if (curxcord >= 500) {
+    curxcord = 1;
+    lastxcord = 1;
+    if (adcolor == 0xFFE0)
+        {
+        adcolor = 0x001F;
+        }
+    else {
+        adcolor = 0xFFE0;
+        }
+    }
+/*     if (curycord >= 37) {
+    curycord = 7;
+    lastycord = 7;
+   if (adcolor == 0xFFE0)
+        {
+        adcolor = 0x001F;
+        }
+    else {
+        adcolor = 0xFFE0;
+        }
+
+    }
+ */   
+    gfx_drawLine(lastxcord, lastycord, curxcord, curycord, adcolor);
+    st_fill_rect(105, 5, 50, 25, ILI9486_RED);
+    st_draw_string(105, 5, ret, ST_COLOR_DARKGREEN, &font_fixedsys_mono_24);
+
+    lastxcord = curxcord;
+    lastycord = curycord;
+
+delay(1500);
+/* 	for (unsigned i = 0; i < 20000000; i++)
+	  {
+		__asm__("nop");
+	  }  
+*/ 
+  }
+} 
+
+
+uint32_t adc_liveonce(void)
+{
+
+    
+ //   uint32_t read;
+	uint8_t channels[] = { ADC_CHANNEL4, };
+	unsigned value;
+    uint32_t read7[6];
+	adc_set_regular_sequence(ADC1, 1, channels);
+	adc_start_conversion_regular(ADC1);
+	while (!(adc_eoc(ADC1))) {
+	    ;
+	}
+//	for (unsigned i = 0; i < 20; i++)
+//	  {
+//		__asm__("nop");
+//	  }
+
+	value = adc_read_regular(ADC1);
+//    value = adc_res[0];
+	value *= 3379; /* 3.3 * 1024 == 3379.2 */
+	value += 104858; /* round, 0.05V * 2 ^ 21 == 104857.6 */
+	ret[0] = (value >> 21) + '0';
+	value &= (1 << 21) - 1;
+	value *= 10;
+	ret[2] = (value >> 21) + '0';
+    read7[0] = ret[0];
+    read7[1] = ret[1];
+    read7[2] = ret[2];
+    read7[3] = ret[3];
+    read7[4] = ret[4];
+    read7[5] = ret[5];
+    read7[6] = ret[6];
+    printf("ret %d\r\n", *(uint16_t*)ret);
+    printf("ret %d\r\n", *ret);
+    delay(1500);
+return *read7;
+}
+
+

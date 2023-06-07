@@ -1,0 +1,4 @@
+struct property_entry mcp2515_properties[] = {
+PROPERTY_ENTRY_U32 (clock-frequency, 0xF42400),
+	{}
+};

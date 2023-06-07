@@ -1,0 +1,8 @@
+# SPDX-License-Identifier: GPL-2.0-only
+#
+config DTBCFG
+	tristate "dtbocfg"
+	default y
+	help
+	  Support for the Cirrus Logic Madera platform audio codecs
+

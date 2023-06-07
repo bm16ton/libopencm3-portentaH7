@@ -1,0 +1,759 @@
+#include<linux/cdev.h>
+#include <linux/kernel.h>
+#include <linux/errno.h>
+#include <linux/module.h>
+#include <linux/device.h>
+#include <linux/slab.h>
+#include <linux/types.h>
+#include <linux/usb.h>
+#include <linux/spi/spi.h>
+#include <linux/delay.h>
+#include <linux/kref.h>
+#include <linux/uaccess.h>
+#include <linux/usb.h>
+#include <linux/mutex.h>
+#include <linux/version.h>
+#include <linux/workqueue.h>	//for work_struct
+#include <linux/gpio.h>		//for led
+#include <linux/gpio/driver.h>
+#include <linux/gpio/machine.h>
+#include <linux/irq.h>
+#include <linux/irqdomain.h>
+#include <linux/irqchip/chained_irq.h>
+#include <linux/pwm.h>
+#include <linux/property.h>
+#include <linux/platform_device.h>
+#include <linux/device.h>
+#include <linux/interrupt.h>
+#include <linux/of_address.h>
+#include <linux/of_gpio.h>
+#include "../inc/spi-tiny-usb.h"
+#include <linux/usb/ch9.h>
+#include <linux/kobject.h>
+#include <linux/kdev_t.h>
+#include <linux/sysfs.h>
+#include <uapi/linux/stat.h>
+#define USB_SPI_MINOR_BASE	192
+#define MAX_TRANSFER		(PAGE_SIZE - 512)
+#define WRITES_IN_FLIGHT	8
+
+#define FLAGS_BEGIN 1
+#define FLAGS_END   2
+
+#define VID 0x0403
+#define PID 0xc631
+
+static DEFINE_IDA (usbspi_devid_ida);
+
+#define CLASS_NAME	"spi_tiny_usb"
+#define NAME		"usbio"
+
+static char *name;
+module_param (name, charp, 0000);
+MODULE_PARM_DESC (name, "Devicename modalias");
+
+static int noirq = 0;
+module_param (noirq, int, 0000);
+MODULE_PARM_DESC (noirq, "disable gpio irq support");
+//static char poop[] = "spi-petra";
+
+struct spi_tiny_usb
+{
+	struct usb_interface *interface;
+	struct usb_device *usb_dev;
+	struct mutex io_mutex;
+	unsigned long disconnected:1;
+	struct mutex ops_mutex;
+	struct mutex spi_buf_lock;
+	struct mutex spi_lock;
+	int id;
+	int index;
+	u8 bulk_in;
+	u8 bulk_out;
+	size_t bulk_in_sz;
+	void *bulk_in_buf;
+	struct gpio_chip chip;
+	bool gpio_init;
+	bool hwirq;
+	int gpio_irq_map[5];
+	struct gpiod_lookup_table *lookup[5];
+	struct gpio_desc *ce_gpiod;
+
+	struct gpio_desc *interrupt_gpio;
+
+	struct usb_endpoint_descriptor *int_in_endpoint;
+	struct urb *int_in_urb;	/* gpio irq urb */
+	unsigned char *int_in_buf;	/* gpio irq rec buffer */
+	__u8 int_in_endpointAddr;	/* gpio irq endpoint address */
+	struct irq_chip irq;	// chip descriptor for IRQs
+	int num;
+	uint8_t irq_num;	// todo either enable 3 more interrupts or keep other 3 from reporting irq capabilities
+	int irq_base;		// base IRQ allocated
+//     struct irq_desc*  irq_descs    [5]; // IRQ descriptors used (irq_num elements)
+//    const struct cpumask *aff_mask;   // not currently used but for irq_to_desc'ish like behavior
+	int irq_types[5];	// IRQ types (irq_num elements)
+	bool irq_enabled[5];	// IRQ enabled flag (irq_num elements)
+	int irq_gpio_map[5];	// IRQ to GPIO pin map (irq_num elements)
+	int irq_hw;
+	const struct usb_device_id *usb_dev_id;
+	struct usbspi_intf_info *info;
+
+	struct platform_device *spi_pdev;
+	struct gpiod_lookup_table *lookup_cs;
+
+	struct work_struct work;	// todo  remove both work's in favor of either currently implmented  usb-send/rec functions or struct based option
+	struct work_struct work2;
+	struct usb_anchor submitted;	// todo use as replacement for kill urb etc.
+	int errors;
+	spinlock_t err_lock;
+	struct kref kref;
+
+	u16 last_mode;		//used to compare old/new spi modes if diff update controller
+	u32 last_speed_hz;	// same as above but for spi speed
+	u16 last_bpw;		// same as two above but for bits per word
+	u16 oldlsb;		// same same for msb/lsb
+
+
+
+	int oldspihz;
+	u16 gbase;
+	u8 bufr[4];
+};
+#define to_usbspi_dev(d) container_of(d, struct spi_tiny_usb, kref)
+
+#define USBSPI_READ_TIMEOUT	5000
+#define USBSPI_WRITE_TIMEOUT	5000
+
+struct usbspi_intf_info
+{
+	int (*probe) (struct usb_interface * interface,
+		      const void *plat_data);
+	int (*remove) (struct usb_interface * interface);
+	const void *plat_data;	/* optional, passed to probe() */
+};
+
+static int i2c_gpio_to_irq (struct gpio_chip *chip, unsigned offset);
+static struct usb_driver spi_tiny_usb_driver;
+static void usbspi_draw_down (struct spi_tiny_usb *dev);
+
+
+
+unsigned int GPIO_irqNumber;
+EXPORT_SYMBOL (GPIO_irqNumber);
+
+static uint8_t gpio_val = 0;	// brequest
+static uint8_t offs = 0;	// windex? I didnt know the actuall names of these when I started, been cp'ing the same code around since
+static uint8_t usbval = 0;	// wvalue
+
+// TODO PUT THE FOLLOWING 3 VARIABLES IN spi_tiny_usb
+int irqt = 2;
+int irqyup = 0;
+int edget = GPIO_ACTIVE_LOW;
+int gbase = 0;
+
+static void
+_gpio_work_job (struct work_struct *work)
+{
+	struct spi_tiny_usb *sd =
+		container_of (work, struct spi_tiny_usb, work);
+	mutex_lock (&sd->io_mutex);
+//   printk(KERN_ALERT "gpioval i/o: %d \n", gpio_val);
+//   printk(KERN_ALERT "usbval i/o: %d \n", usbval);
+//   printk(KERN_ALERT "offset i/o: %d \n",offs);
+	usb_control_msg (sd->usb_dev,
+			 usb_sndctrlpipe (sd->usb_dev, 0),
+			 gpio_val, USB_TYPE_VENDOR | USB_DIR_OUT,
+			 usbval, offs, NULL, 0, 3000);
+	mutex_unlock (&sd->io_mutex);
+}
+
+static void
+_gpio_work_job2 (struct work_struct *work2)
+{
+	struct spi_tiny_usb *sd =
+		container_of (work2, struct spi_tiny_usb, work2);
+	mutex_lock (&sd->io_mutex);
+//   printk(KERN_ALERT "Read port i/o: %d \n", offs);
+	usb_control_msg (sd->usb_dev,
+			 usb_rcvctrlpipe (sd->usb_dev, 0),
+			 gpio_val, USB_TYPE_VENDOR | USB_DIR_IN,
+			 usbval, offs, (u8 *) sd->bufr, 4, 100);
+	mutex_unlock (&sd->io_mutex);
+}
+
+
+
+
+static ssize_t i2cspeed_store(struct device *dev,
+				   struct device_attribute *attr,
+				   const char *buf, size_t count)
+{
+struct spi_tiny_usb *data = dev_get_drvdata(dev);
+    u16 value;
+	u8 ret2;
+	u8 ret3;
+	ret2 = kstrtou16(buf, 10, &value);
+//	printk("value %d\n", value);
+	if (value == 100) {
+	ret3 = 1;
+	} else if (value == 400) {
+	ret3 = 2;
+	} else if (value == 1000) {
+	ret3 = 3;
+	} else {
+	return -EINVAL;
+	}
+	mutex_lock (&data->io_mutex);
+    usb_control_msg(data->usb_dev,
+                   usb_sndctrlpipe(data->usb_dev, 0),
+                   81, USB_TYPE_VENDOR | USB_DIR_OUT,
+                ret3, ret3,
+                  NULL, 0,
+                   1000);
+
+	mutex_unlock (&data->io_mutex);
+
+    return count;
+}
+
+static ssize_t i2cspeed_show(struct device *dev,
+				   struct device_attribute *attr,
+				   char *buf)
+{
+
+struct spi_tiny_usb *data = dev_get_drvdata(dev);
+int retval;
+int retval2;
+u16 ret2 = 0;
+char *rxbuf = kmalloc (2, GFP_KERNEL);
+if (!rxbuf) {
+	return -ENOMEM;
+}
+
+	usb_control_msg (data->usb_dev,
+			 usb_rcvctrlpipe (data->usb_dev, 0),
+			 82, USB_TYPE_VENDOR | USB_DIR_IN,
+			 4, 4, rxbuf, 2, 500);
+
+//memcpy (data->bufr, rxbuf, 2);
+
+retval = rxbuf[0];
+retval2 = rxbuf[1];
+printk ("retval = %d\n", retval);
+printk ("retval2 = %d\n", retval2);
+if (retval2 == 1) {
+	ret2 = 100;
+} else if (retval2 == 2) {
+	ret2 = 400;
+} else if (retval2 == 3) {
+	ret2 = 1000;
+}
+printk ("ret2 = %d\n", ret2);
+kfree (rxbuf);
+
+return scnprintf(buf, PAGE_SIZE, "%d\n", ret2);
+
+}
+static DEVICE_ATTR_RW(i2cspeed);
+
+//struct class *class_usbio;
+//dev_t device_number;
+//struct device *device_usbio;
+
+static struct attribute *spi_tiny_usb_attrs[] = {
+&dev_attr_i2cspeed.attr,
+    NULL
+};
+
+struct class *class_usbio;
+dev_t device_number;
+struct device *device_usbio;
+/*
+static int create_sysfs_attrs(struct usb_interface *intf)
+{
+class_usbio= class_create(THIS_MODULE,"usbio");
+device_usbio= device_create(class_usbio, NULL, device_number, NULL,"usbi2c");
+
+return 0;
+}
+*/
+static void remove_sysfs_attrs(struct usb_interface *intf)
+{
+device_remove_file(&intf->dev, &dev_attr_i2cspeed);
+}
+
+
+
+static void
+int_cb (struct urb *urb)
+{
+	struct spi_tiny_usb *sd = urb->context;
+	unsigned long flags;
+	char *intrxbuf = kmalloc (4, GFP_KERNEL);
+	if (!intrxbuf)
+		printk (KERN_ALERT "Failed to create intrxbuf \n");
+
+//   printk(KERN_ALERT "urb interrupt is called \n");
+	memcpy (intrxbuf, sd->int_in_buf, 4);
+//   printk(KERN_ALERT "received data 0: %d \n", sd->int_in_buf[0]);  // TODO MAKE 4/5 GPIO IRQ COMPAT AND SEPERATE/CALL CORRECTLY THE IRQ FROM HERE
+//   printk(KERN_ALERT "received data 1: %d \n", sd->int_in_buf[1]);
+//   printk(KERN_ALERT "received data 2: %d \n", sd->int_in_buf[2]);
+//   printk(KERN_ALERT "received data 3: %d \n", sd->int_in_buf[3]);
+
+	if (irqyup == 1)
+	  {
+//       printk(KERN_ALERT "irq alive and fired\n");
+		  local_irq_save (flags);
+		  generic_handle_irq (GPIO_irqNumber);
+		  local_irq_disable ();
+		  local_irq_restore (flags);
+	  }
+
+	usb_submit_urb (sd->int_in_urb, GFP_KERNEL);
+	kfree (intrxbuf);
+}
+
+static void
+_gpioa_set (struct gpio_chip *chip, unsigned offset, int value)
+{
+	struct spi_tiny_usb *data = container_of (chip, struct spi_tiny_usb,
+						  chip);
+//   printk(KERN_INFO "GPIO SET INFO for pin: %d \n", offset);
+
+	usbval = 0;
+
+	offs = offset;
+	gpio_val = value;
+	schedule_work (&data->work);
+}
+
+static int
+_gpioa_get (struct gpio_chip *chip, unsigned offset)
+{
+	struct spi_tiny_usb *data = container_of (chip, struct spi_tiny_usb,
+						  chip);
+
+	int retval, retval1, retval2, retval3;
+	char *rxbuf = kmalloc (4, GFP_KERNEL);	//4 for 4 gpio for todo grab multi pin states, also seems the usb rx buffer needs to be same size or issues
+	if (!rxbuf)
+		return -ENOMEM;
+
+//    printk(KERN_INFO "GPIO GET INFO: %d \n", offset);
+
+	usbval = 3;
+	offs = offset;
+	gpio_val = 1;
+
+	usb_control_msg (data->usb_dev,
+			 usb_rcvctrlpipe (data->usb_dev, 0),
+			 gpio_val, USB_TYPE_VENDOR | USB_DIR_IN,
+			 usbval, offs, rxbuf, 4, 100);
+
+
+	//THE FOLLOWING IS OVERKILL BUT WHEN YOU FINALLY FIGURE OUT HOW TO ACTUALLY RECEIVE SOME DATA.....
+	retval = rxbuf[0];
+	retval1 = rxbuf[1];
+	retval2 = rxbuf[2];
+	retval3 = rxbuf[3];
+	/*   printk("buf0 =  %d \n", retval);
+	   printk("buf1 =  %d \n", retval1);
+	   printk("buf2 =  %d \n", retval2);
+	   printk("buf3 =  %d \n", retval3);
+	 */
+	kfree (rxbuf);
+
+	return retval1 - 3;
+}
+
+static int
+_direction_output (struct gpio_chip *chip, unsigned offset, int value)
+{
+	struct spi_tiny_usb *data = container_of (chip, struct spi_tiny_usb,
+						  chip);
+	//  printk("Setting pin to OUTPUT gppio-offset %d\n", offset);
+
+	usbval = 2;
+	offs = offset;
+
+	schedule_work (&data->work);
+
+	return 0;
+}
+
+static int
+_direction_input (struct gpio_chip *chip, unsigned offset)
+{
+	struct spi_tiny_usb *data = container_of (chip, struct spi_tiny_usb,
+						  chip);
+
+//   printk("Setting pin to INPUT gpio-offset %d\n", offset);
+
+	usbval = 1;
+	offs = offset;
+
+	schedule_work (&data->work);
+
+	return 0;
+}
+
+static int
+i2c_gpio_to_irq (struct gpio_chip *chip, unsigned offset)
+{
+	struct spi_tiny_usb *data = container_of (chip, struct spi_tiny_usb,
+						  chip);
+	GPIO_irqNumber = irq_create_mapping (data->chip.irq.domain, offset);
+	pr_info ("GPIO_irqNumber = %d\n", GPIO_irqNumber);
+
+	return GPIO_irqNumber;
+}
+
+static void
+usb_gpio_irq_enable (struct irq_data *irqd)
+{
+	struct spi_tiny_usb *dev = irq_data_get_irq_chip_data (irqd);
+	irqyup = 1;
+	/* Is that needed? */
+	if (dev->irq_enabled[4])
+		return;
+
+	dev->irq_enabled[4] = true;
+}
+
+void
+set_irq_disabled (struct irq_data *irqd)
+{
+	struct spi_tiny_usb *dev = irq_data_get_irq_chip_data (irqd);
+	irqyup = 0;
+	if (!dev->irq_enabled[4])
+		return;
+
+	dev->irq_enabled[4] = false;
+}
+
+static void
+usb_gpio_irq_disable (struct irq_data *irqd)
+{
+//    struct gpio_chip *chip = irq_data_get_irq_chip_data(irqd);
+//    struct spi_tiny_usb *data = container_of(chip, struct spi_tiny_usb, chip);
+	/* Is that needed? */
+//      if (!chip->irq_enabled[4])
+//              return;
+
+	usbval = 9;
+	offs = 1;
+	gpio_val = 9;
+//   schedule_work(&data->work);
+	set_irq_disabled (irqd);
+}
+
+static int
+usbirq_irq_set_type (struct irq_data *irqd, unsigned type)
+{
+	struct gpio_chip *chip = irq_data_get_irq_chip_data (irqd);
+	struct spi_tiny_usb *data = container_of (chip, struct spi_tiny_usb,
+						  chip);
+//    int pin = irqd_to_hwirq(irqd);
+//    pr_info("irq pin = %d\n", pin);
+	irqt = type;
+	irqyup = 1;
+	usb_gpio_irq_enable (irqd);
+//    pr_info("setting irq type GPIO_irqNumber = %d\n", GPIO_irqNumber);
+	switch (type)
+	  {
+	  case IRQ_TYPE_NONE:
+		  usbval = 9;
+		  offs = 1;
+		  gpio_val = 9;
+		  schedule_work (&data->work);
+		  break;
+	  case IRQ_TYPE_LEVEL_HIGH:
+		  usbval = 9;
+		  offs = 2;
+		  gpio_val = 9;
+		  schedule_work (&data->work);
+		  break;
+	  case IRQ_TYPE_LEVEL_LOW:
+		  usbval = 9;
+		  offs = 3;
+		  gpio_val = 9;
+		  schedule_work (&data->work);
+		  break;
+	  case IRQ_TYPE_EDGE_BOTH:
+		  usbval = 9;
+		  offs = 4;
+		  gpio_val = 9;
+		  schedule_work (&data->work);
+		  break;
+	  case IRQ_TYPE_EDGE_RISING:
+		  usbval = 9;
+		  offs = 5;
+		  gpio_val = 9;
+		  edget = GPIO_ACTIVE_LOW;
+		  schedule_work (&data->work);
+		  break;
+	  case IRQ_TYPE_EDGE_FALLING:
+		  usbval = 9;
+		  offs = 6;
+		  gpio_val = 9;
+		  schedule_work (&data->work);
+		  edget = GPIO_ACTIVE_HIGH;
+		  break;
+	  default:
+		  return -EINVAL;
+	  }
+
+	return 0;
+}
+
+//TODO dynamically append to gpionames for multi-instance
+// const char *gpio_names[] = { "CSpi1", "PC7", "PG7", "PJ11", "IRQpk1" };
+const char *gpio_names[] = { "spi-cs", "ce", "csn", "PJ11", "interrupt" };
+
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5,18,0)	//dunno actual kernel ver when it switched but somewhere around then
+static const struct irq_chip usb_gpio_irqchip = {
+	.name = "usbgpio-irq",
+	.irq_enable = usb_gpio_irq_enable,
+	.irq_disable = usb_gpio_irq_disable,
+	.irq_set_type = usbirq_irq_set_type,
+	.flags = IRQCHIP_IMMUTABLE, GPIOCHIP_IRQ_RESOURCE_HELPERS,
+};
+#endif
+
+static void
+spi_tiny_usb_free (struct spi_tiny_usb *priv)
+{
+	usb_put_dev (priv->usb_dev);
+	kfree (priv);
+}
+
+// static int usb_read(struct spi_tiny_usb *dev, int cmd, int value, int index, void *data, int len);  //WILL NEED/USE AGAIN IM SURE
+static int usb_write (struct spi_tiny_usb *dev, int cmd, int value, int index,
+		      void *data, int len);
+static int usbspi_bulk_xfer (struct usb_interface *interface,
+			     struct bulk_desc *desc);
+static int usbspi_write_data (struct usb_interface *interface,
+			      const char *buf, size_t len);
+static int usbspi_read_data (struct usb_interface *interface, void *buf,
+			     size_t len);
+//void csset(struct spi_device *spi, bool enable);
+
+
+static int
+usbspi_write_data (struct usb_interface *interface,
+		   const char *buf, size_t len)
+{
+	struct bulk_desc desc;
+	int ret;
+	desc.act_len = 0;
+	desc.dir_out = true;
+	desc.data = (char *) buf;
+	desc.len = len;
+	desc.timeout = USBSPI_WRITE_TIMEOUT;
+	ret = usbspi_bulk_xfer (interface, &desc);
+	if (ret < 0)
+		return ret;
+	return desc.act_len;
+}
+
+
+
+static int
+usbspi_read_data (struct usb_interface *interface, void *buf, size_t len)
+{
+	struct spi_tiny_usb *priv = usb_get_intfdata (interface);
+	struct bulk_desc desc;
+	int ret;
+
+	desc.act_len = 0;
+	desc.dir_out = false;
+	desc.data = priv->bulk_in_buf;
+
+	desc.len = min_t (size_t, len, priv->bulk_in_sz);
+	desc.timeout = USBSPI_READ_TIMEOUT;
+
+	ret = usbspi_bulk_xfer (interface, &desc);
+	if (ret)
+		return ret;
+
+	ret = desc.act_len;
+	if (ret > len)
+		ret = len;
+	memcpy (buf, desc.data, ret);
+	return ret;
+}
+
+
+static int
+usbspi_bulk_xfer (struct usb_interface *interface, struct bulk_desc *desc)
+{
+	struct spi_tiny_usb *priv = usb_get_intfdata (interface);
+	struct usb_device *usb_dev = priv->usb_dev;
+	unsigned int pipe;
+	int ret;
+	mutex_lock (&priv->io_mutex);
+	if (!priv->interface)
+	  {
+		  printk ("failed to get interface \r\n");
+		  ret = -ENODEV;
+		  goto exit;
+	  }
+
+	if (desc->dir_out)
+		pipe = usb_sndbulkpipe (usb_dev, priv->bulk_out);
+	else
+		pipe = usb_rcvbulkpipe (usb_dev, priv->bulk_in);
+	ret = usb_bulk_msg (usb_dev, pipe, desc->data, desc->len,
+			    &desc->act_len, desc->timeout);
+	if (ret)
+		dev_dbg (&usb_dev->dev, "bulk msg failed: %d\n", ret);
+
+      exit:
+	mutex_unlock (&priv->io_mutex);
+	return ret;
+}
+
+static void
+usbspi_lock (struct usb_interface *intf)
+{
+	struct spi_tiny_usb *priv = usb_get_intfdata (intf);
+
+	mutex_lock (&priv->ops_mutex);
+}
+
+static void
+usbspi_unlock (struct usb_interface *intf)
+{
+	struct spi_tiny_usb *priv = usb_get_intfdata (intf);
+
+	mutex_unlock (&priv->ops_mutex);
+}
+
+/*
+static void setcs(struct spi_device *spi, bool enable) {
+struct spi_tiny_usb *priv = spi_master_get_devdata(spi->master);
+//struct spi_device *spidev = to_spi_device(priv);
+if (enable == false) {
+usb_write(priv, 72, 0, 0, NULL, 0);
+printk("setting cs high\n");
+  }
+//csset(priv->spidev, enable);
+
+if (enable == true) {
+usb_write(priv, 71, 0, 0, NULL, 0);
+printk("setting cs low\n");
+}
+}
+*/
+
+static void
+usbspi_config (struct usb_interface *dev, int cmd, int value, int index,
+	       void *data, int len)
+{
+	struct spi_tiny_usb *priv = usb_get_intfdata (dev);
+	struct usb_device *usb_dev = priv->usb_dev;
+	int ret;
+	mutex_lock (&priv->io_mutex);
+	ret = usb_control_msg (usb_dev, usb_sndctrlpipe (usb_dev, 0),
+			       cmd, USB_TYPE_VENDOR | USB_RECIP_INTERFACE,
+			       value, index, data, len, 2000);
+
+	if (ret < 0)
+		;
+
+	mutex_unlock (&priv->io_mutex);
+	return;
+}
+
+/*
+static void usbspi_config(struct spi_tiny_usb *dev, int cmd, int value, int index)
+{
+	struct spi_tiny_usb *priv = usb_get_intfdata(interface);
+	struct usb_device *usb_dev = priv->usb_dev;
+	unsigned int pipe;
+	int ret;
+
+	mutex_lock(&priv->io_mutex);
+	if (!priv->interface) {
+		ret = -ENODEV;
+		goto exit;
+	}
+
+	if (!desc->data && desc->size)
+		desc->data = priv->bulk_in_buf;
+
+	if (desc->dir_out)
+		pipe = usb_sndctrlpipe(usb_dev, 0);
+	else
+		pipe = usb_rcvctrlpipe(usb_dev, 0);
+
+	ret = usb_control_msg(usb_dev, pipe, desc->request, desc->requesttype,
+			      desc->value, desc->index, desc->data, desc->size,
+			      desc->timeout);
+	if (ret < 0)
+		dev_dbg(&usb_dev->dev, "ctrl msg failed: %d\n", ret);
+exit:
+	mutex_unlock(&priv->io_mutex);
+
+}
+*/
+
+static const struct usbspi_intf_ops usbspi_intf_ops = {
+//      .ctrl_xfer = usbspi_bulk_xfer,
+	.bulk_xfer = usbspi_bulk_xfer,
+	.read_data = usbspi_read_data,
+	.write_data = usbspi_write_data,
+	.lock = usbspi_lock,
+	.unlock = usbspi_unlock,
+	.setup_data = usbspi_config,
+};
+
+
+/* ----- begin of spi layer ---------------------------------------------- */
+
+static int
+usbspi_intf_spi_remove (struct usb_interface *intf)
+{
+	struct spi_tiny_usb *priv = usb_get_intfdata (intf);
+	struct device *dev = &intf->dev;
+
+	dev_dbg (dev, "%s: spi pdev %p\n", __func__, priv->spi_pdev);
+	gpiod_remove_lookup_table (priv->lookup_cs);
+	priv->irq_enabled[4] = false;
+	platform_device_unregister (priv->spi_pdev);
+	return 0;
+}
+
+static const struct usb_spi_platform_data usbspi_bus_plat_data;
+
+static int usbspi_intf_spi_probe (struct usb_interface *interface,
+				  const void *plat_data);
+
+static const struct usbspi_intf_info usbspi_bus_intf_info = {
+	.probe = usbspi_intf_spi_probe,
+	.remove = usbspi_intf_spi_remove,
+	.plat_data = &usbspi_bus_plat_data,
+};
+
+static struct usb_device_id spi_tiny_usb_table[] = {
+	{USB_DEVICE (VID, PID),
+	 .driver_info = (kernel_ulong_t) & usbspi_bus_intf_info},
+	{}
+};
+
+MODULE_DEVICE_TABLE (usb, spi_tiny_usb_table);
+
+static int
+usb_write (struct spi_tiny_usb *dev, int cmd, int value, int index,
+	   void *data, int len)
+{
+	int ret;
+	mutex_lock (&dev->io_mutex);
+	ret = usb_control_msg (dev->usb_dev,
+			       usb_sndctrlpipe (dev->usb_dev, 0), cmd,
+			       USB_TYPE_VENDOR | USB_RECIP_INTERFACE, value,
+			       index, data, len, 2000);
+	mutex_unlock (&dev->io_mutex);
+	return ret;
+}
+
+
